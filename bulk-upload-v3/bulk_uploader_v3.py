@@ -264,7 +264,7 @@ class PromptParser:
                 tag_name = model_name
             
             base_tag = self._get_or_create_tag(session, tag_name)
-            resource.tags.add(base_tag)
+            resource.tags.append(base_tag)
             converted_count += 1
         
         return converted_count
@@ -279,7 +279,7 @@ class PromptParser:
         for search_term, tag_name in self.tag_mapping.items():
             if search_term.lower() in prompt_text.lower():
                 converted_tag = self._get_or_create_tag(session, tag_name)
-                resource.tags.add(converted_tag)
+                resource.tags.append(converted_tag)
                 converted_count += 1
         
         # Lora 태그 처리
@@ -491,7 +491,7 @@ class ImageProcessingSystem:
             for tag_id in self.default_tag_ids:
                 tag = session.query(ColorCodeTags).filter_by(id=tag_id).first()
                 if tag:
-                    resource.tags.add(tag)
+                    resource.tags.append(tag)
                 else:
                     logging.warning(f"Tag ID {tag_id} not found in database")
             session.commit()
