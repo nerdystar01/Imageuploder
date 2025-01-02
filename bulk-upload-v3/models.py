@@ -140,18 +140,24 @@ class Resource(Base):
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
 
 class ColorCodeTags(Base):
-   __tablename__ = 'color_code_tags'
+    __tablename__ = 'color_code_tags'
    
-   id = Column(Integer, primary_key=True)
-   color_code = Column(String(7))
-   tag = Column(String(4000))
+    id = Column(Integer, primary_key=True)
+    color_code = Column(String(7))
+    tag = Column(String(4000))
+    type = Column(String(10), default='normal')  # 추가
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # 추가
    
-   # Timestamps
-   created_at = Column(DateTime, default=datetime.utcnow)
-   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
    
-   # Relationships
-   resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
+    # Relationships
+    resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
+    user = relationship("User", back_populates="color_code_tags")  # 추가
+
+    def __repr__(self):
+        return f"<ColorCodeTag {self.tag}>"
 
 class SdModel(Base):
    __tablename__ = 'sdmodel'
