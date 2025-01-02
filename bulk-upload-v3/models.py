@@ -1,14 +1,28 @@
-# ------------------------------
-#  Imports
-# ------------------------------
+# Standard Library
+import os
+import sys
+import io
+import logging
+import re
+from typing import Tuple, Dict, Any, List
+from datetime import datetime
+import uuid
+from urllib.parse import quote_plus
+
+# Third Party Libraries
+from PIL import Image, PngImagePlugin
+import piexif
+import piexif.helper
+from tqdm import tqdm
+from sshtunnel import SSHTunnelForwarder
+from google.cloud import storage
+from google.oauth2 import service_account
+
+# SQLAlchemy
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Session, scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import scoped_session, sessionmaker, relationship
-from datetime import datetime
-from urllib.parse import quote_plus
-import uuid
 
 Base = declarative_base()
 
@@ -59,14 +73,14 @@ class User(Base):
    liked_resources = relationship("Resource", secondary=resource_likes, back_populates="likes")
    hidden_resources = relationship("Resource", secondary=resource_hidden_users, back_populates="hidden_by")
    tabbed_resources = relationship("Resource", secondary=resource_tabbed_users, back_populates="tabbed_by")
-   color_code_tags = relationship("ColorCodeTags", back_populates="user", foreign_keys="[ColorCodeTags.user_id]")
+   color_code_tags = relationship("ColorCodeTags", back_populates="user")
 
 class Resource(Base):
    __tablename__ = 'resource'
 
    # Primary and Foreign Keys
    id = Column(Integer, primary_key=True)
-   user_id = Column(Integer, nullable=True)
+   user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
    original_resource_id = Column(Integer, nullable=True)
    history_id = Column(Integer, nullable=True)
    category_id = Column(Integer, nullable=True)
@@ -139,6 +153,7 @@ class Resource(Base):
    likes = relationship("User", secondary=resource_likes, back_populates="liked_resources")
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
+   user = relationship("User", foreign_keys=[user_id])
 
 class ColorCodeTags(Base):
     __tablename__ = 'color_code_tags'
@@ -146,8 +161,8 @@ class ColorCodeTags(Base):
     id = Column(Integer, primary_key=True)
     color_code = Column(String(7))
     tag = Column(String(4000))
-    type = Column(String(10), default='normal')  # 추가
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # 추가
+    type = Column(String(10), default='normal')
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -155,7 +170,7 @@ class ColorCodeTags(Base):
    
     # Relationships
     resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
-    user = relationship("User", back_populates="color_code_tags")  # 추가
+    user = relationship("User", back_populates="color_code_tags")
 
     def __repr__(self):
         return f"<ColorCodeTag {self.tag}>"
