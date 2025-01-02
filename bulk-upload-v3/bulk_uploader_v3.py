@@ -90,6 +90,7 @@ class Utills:
         session.close()
         self.stop_ssh_tunnel()
 
+    @classmethod
     def upload_image_to_gcp_bucket(blob_name, data, bucket_name):
         current_script_path = os.path.abspath(__file__)
         base_directory = os.path.dirname(current_script_path)
@@ -359,7 +360,7 @@ class CreateResource:
             session.rollback()
             logging.error(f"Failed to create resource: {str(e)}")
             raise
-
+    
     def _upload_images(self, resource: Resource, original_image: Image.Image,
                       image_128: Image.Image, image_512: Image.Image) -> None:
         """Upload original and thumbnail images to storage
@@ -386,7 +387,7 @@ class CreateResource:
         try:
             # Upload original image
             original_blob_name = f"_media/resource/{resource.uuid}.png"
-            resource.image = self.utils.upload_to_bucket(
+            resource.image = Utills.upload_to_bucket(
                 original_blob_name,
                 original_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -394,7 +395,7 @@ class CreateResource:
 
             # Upload 128px thumbnail
             thumb_128_blob_name = f"_media/resource_thumbnail/{resource.uuid}_128.png"
-            resource.thumbnail_image = self.utils.upload_to_bucket(
+            resource.thumbnail_image = Utills.upload_to_bucket(
                 thumb_128_blob_name,
                 image_128_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -402,7 +403,7 @@ class CreateResource:
 
             # Upload 512px thumbnail
             thumb_512_blob_name = f"_media/thumbnail_512/{resource.uuid}_512.png"
-            resource.thumbnail_image_512 = self.utils.upload_to_bucket(
+            resource.thumbnail_image_512 = Utills.upload_to_bucket(
                 thumb_512_blob_name,
                 image_512_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -494,11 +495,12 @@ class CreateResource:
 #  Image Processing
 # ------------------------------
 class ImageProcessingSystem:
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, default_tag_ids: List[int] = None):
         self.utils = Utills()
         self.png_util = PngUtill()
         self.prompt_parser = PromptParser()
         self.resource_creator = CreateResource()
+        self.default_tag_ids = default_tag_ids or []
         self.user_id = user_id
 
     def add_default_tags(self, resource: Resource, session: Session) -> None:
@@ -592,17 +594,21 @@ def get_user_input():
 
         # Get default tag IDs
         default_tag_ids = []
-        add_tags = input("디폴트 태그를 추가하시겠습니까? (y/n): ").strip().lower()
-        if add_tags == 'y':
-            while True:
-                tag_input = input("태그 ID를 입력해주세요 (완료시 엔터): ").strip()
-                if not tag_input:
-                    break
-                try:
-                    tag_id = int(tag_input)
-                    default_tag_ids.append(tag_id)
-                except ValueError:
-                    print("올바른 숫자를 입력해주세요.")
+        while True:
+            add_tags = input("디폴트 태그를 추가하시겠습니까? (y/n): ").strip().lower()
+            if add_tags in ['y', 'n']:
+                if add_tags == 'y':
+                    while True:
+                        tag_input = input("태그 ID를 입력해주세요 (완료시 엔터): ").strip()
+                        if not tag_input:
+                            break
+                        try:
+                            tag_id = int(tag_input)
+                            default_tag_ids.append(tag_id)
+                        except ValueError:
+                            print("올바른 숫자를 입력해주세요.")
+                break
+            print("'y' 또는 'n'을 입력해주세요.")
 
         return user_id, folder_path, default_tag_ids
 
