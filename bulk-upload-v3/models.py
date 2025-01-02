@@ -75,6 +75,19 @@ class User(Base):
    tabbed_resources = relationship("Resource", secondary=resource_tabbed_users, back_populates="tabbed_by")
    color_code_tags = relationship("ColorCodeTags", back_populates="user")
 
+class ResourceTagV2(Base):
+    __tablename__ = 'resource_tag_v2'
+   
+    id = Column(Integer, primary_key=True)
+    resource_id = Column('resource_id', Integer, ForeignKey('resource.id'))
+    tag_id = Column('tag_id', Integer, ForeignKey('color_code_tags.id'))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 관계 설정
+    resource = relationship("Resource", backref="resource_tags")
+    tag = relationship("ColorCodeTags", backref="tag_resources")
+
 class Resource(Base):
    __tablename__ = 'resource'
 
@@ -149,31 +162,37 @@ class Resource(Base):
    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
    # Relationships
-   tags = relationship("ColorCodeTags", secondary=resource_tags, back_populates="resources")
+   tags = relationship(
+        "ColorCodeTags",
+        secondary="resource_tag_v2",
+        primaryjoin="Resource.id==ResourceTagV2.resource_id",
+        secondaryjoin="ResourceTagV2.tag_id==ColorCodeTags.id",
+        back_populates="resources"
+    )
    likes = relationship("User", secondary=resource_likes, back_populates="liked_resources")
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
    user = relationship("User", foreign_keys=[user_id])
 
 class ColorCodeTags(Base):
-    __tablename__ = 'color_code_tags'
-   
-    id = Column(Integer, primary_key=True)
-    color_code = Column(String(7))
-    tag = Column(String(4000))
-    type = Column(String(10), default='normal')
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
-   
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-   
-    # Relationships
-    resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
-    user = relationship("User", back_populates="color_code_tags")
+   __tablename__ = 'color_code_tags'
 
-    def __repr__(self):
-        return f"<ColorCodeTag {self.tag}>"
+   id = Column(Integer, primary_key=True)
+   color_code = Column(String(7))
+   tag = Column(String(4000))
+   type = Column(String(10), default='normal')
+   user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+
+   # Timestamps
+   created_at = Column(DateTime, default=datetime.utcnow)
+   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+   # Relationships
+   resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
+   user = relationship("User", back_populates="color_code_tags")
+
+   def __repr__(self):
+      return f"<ColorCodeTag {self.tag}>"
 
 class SdModel(Base):
    __tablename__ = 'sdmodel'
