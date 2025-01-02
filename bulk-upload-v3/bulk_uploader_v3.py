@@ -63,7 +63,7 @@ class Utills:
             logging.info("SSH tunnel closed")
 
     @classmethod
-    def upload_to_bucket(blob_name, data, bucket_name):
+    def upload_to_bucket(cls, blob_name, data, bucket_name):
         current_script_path = os.path.abspath(__file__)
         base_directory = os.path.dirname(current_script_path)
         
@@ -91,7 +91,7 @@ class Utills:
         self.stop_ssh_tunnel()
 
     @classmethod
-    def upload_image_to_gcp_bucket(blob_name, data, bucket_name):
+    def upload_image_to_gcp_bucket(cls, blob_name, data, bucket_name):
         current_script_path = os.path.abspath(__file__)
         base_directory = os.path.dirname(current_script_path)
         
