@@ -59,6 +59,7 @@ class User(Base):
    liked_resources = relationship("Resource", secondary=resource_likes, back_populates="likes")
    hidden_resources = relationship("Resource", secondary=resource_hidden_users, back_populates="hidden_by")
    tabbed_resources = relationship("Resource", secondary=resource_tabbed_users, back_populates="tabbed_by")
+   color_code_tags = relationship("ColorCodeTags", back_populates="user", foreign_keys="[ColorCodeTags.user_id]")
 
 class Resource(Base):
    __tablename__ = 'resource'
