@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Tuple, Dict, Any, List
 from datetime import datetime
+import yaml
 
 # Third Party Libraries
 from PIL import Image, PngImagePlugin
@@ -27,6 +28,8 @@ from models import (
     ColorCodeTags,
     SdModel
 )
+from tag_mappings import TAG_MAPPING
+
 
 
 # ------------------------------
@@ -207,7 +210,7 @@ class PngUtill:
 
     def create_image_scales(self, image_path, heights=(128, 512)):
         original_image = Image.open(image_path)
-        resized_images = {height: self.resize_image(original_image, height) for height in heights}
+        resized_images = {height: self.scale_image_by_height(original_image, height) for height in heights}
         return original_image, resized_images[128], resized_images[512]
 
 # ------------------------------
@@ -215,74 +218,60 @@ class PngUtill:
 # ------------------------------
 class PromptParser:
     def __init__(self):
-        self.tag_mapping = {
-            # ... (기존 매핑)
-        }
+        self.tag_mapping = TAG_MAPPING
         # Lora 태그를 찾기 위한 정규식 패턴
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'
 
     def _get_or_create_tag(self, session: Session, tag_name: str) -> ColorCodeTags:
-        # ... (기존 메서드)
-        pass
+        """
+        주어진 태그 이름으로 태그를 조회하거나 없으면 새로 생성합니다.
+        """
+        try:
+            tag = session.query(ColorCodeTags).filter_by(tag=tag_name).first()
+            if tag is None:
+                tag = ColorCodeTags(
+                    tag=tag_name,
+                    color_code='#FFFFFF'
+                )
+                session.add(tag)
+                session.commit()
+                logging.info(f"새로운 태그 생성됨: {tag_name}")
+            return tag
+            
+        except Exception as e:
+            session.rollback()
+            logging.error(f"태그 생성/조회 중 오류 발생: {str(e)}")
+            raise
 
     def _extract_lora_tags(self, prompt_text: str) -> List[Tuple[str, float]]:
         """
         프롬프트 텍스트에서 모든 Lora 태그와 가중치를 추출합니다.
-        
-        Args:
-            prompt_text (str): 분석할 프롬프트 텍스트
-            
-        Returns:
-            List[Tuple[str, float]]: (모델명, 가중치) 튜플의 리스트
         """
         matches = re.findall(self.lora_regex, prompt_text)
         return [(model, float(weight)) for model, weight in matches]
 
-    def _process_lora_tags(self, session, resource, prompt_text: str) -> int:
+    def _process_lora_tags(self, session: Session, resource: Resource, prompt_text: str) -> int:
         """
         프롬프트 텍스트에서 Lora 태그를 처리하고 리소스에 태그를 추가합니다.
-        
-        Args:
-            resource: 태그가 추가될 리소스 객체
-            prompt_text (str): 분석할 프롬프트 텍스트
-            
-        Returns:
-            int: 처리된 Lora 태그의 수
         """
         converted_count = 0
         lora_tags = self._extract_lora_tags(prompt_text)
         
         for model_name, weight in lora_tags:
-            # 모델명을 태그 매핑에서 찾아 변환
             if model_name.lower() in self.tag_mapping:
                 tag_name = self.tag_mapping[model_name.lower()]
             else:
-                # 매핑에 없는 경우 원본 모델명 사용
                 tag_name = model_name
             
-            # 가중치 정보를 포함한 태그 생성
-            # weight_tag_name = f"{tag_name}_{weight:.1f}"
-            # converted_tag = self._get_or_create_tag(session, weight_tag_name)
-            # resource.tags.add(converted_tag)
-            
-            # 기본 태그도 추가 (가중치 없는 버전)
             base_tag = self._get_or_create_tag(session, tag_name)
             resource.tags.add(base_tag)
-            
             converted_count += 1
         
         return converted_count
 
-    def _process_single_resource(self, resource, prompt_text: str) -> int:
+    def _process_single_resource(self, session: Session, resource: Resource, prompt_text: str) -> int:
         """
         단일 리소스의 프롬프트를 처리하고 태그를 추가합니다.
-        
-        Args:
-            resource: 태그가 추가될 리소스 객체
-            prompt_text (str): 분석할 프롬프트 텍스트
-            
-        Returns:
-            int: 총 처리된 태그의 수
         """
         converted_count = 0
         
@@ -294,27 +283,20 @@ class PromptParser:
                 converted_count += 1
         
         # Lora 태그 처리
-        converted_count += self._process_lora_tags(resource, prompt_text)
+        converted_count += self._process_lora_tags(session, resource, prompt_text)
         
         return converted_count
 
-    def process_resources(self, resources, prompt_field: str = 'prompt') -> int:
+    def process_resources(self, session: Session, resources: List[Resource], prompt_field: str = 'prompt') -> int:
         """
         여러 리소스의 프롬프트를 처리하고 태그를 추가합니다.
-        
-        Args:
-            resources: 처리할 리소스 목록
-            prompt_field (str): 프롬프트 텍스트가 있는 필드 이름
-            
-        Returns:
-            int: 총 처리된 태그의 수
         """
         total_converted = 0
         
         for resource in resources:
             prompt_text = getattr(resource, prompt_field, '')
             if prompt_text:
-                total_converted += self._process_single_resource(resource, prompt_text)
+                total_converted += self._process_single_resource(session, resource, prompt_text)
         
         return total_converted
 
