@@ -514,6 +514,37 @@ class ImageProcessingSystem:
         self.default_tag_ids = default_tag_ids or []
         self.user_id = user_id
 
+    def add_create_tags(self, resource: Resource, session: Session) -> None:
+        try:
+            # 사용자의 collect 타입 태그 조회
+            create_tags = session.query(ColorCodeTags).filter(
+                ColorCodeTags.user_id == self.user_id,
+                ColorCodeTags.type == 'create'
+            ).all()
+            
+            if not create_tags:
+                print(f"사용자 {self.user_id}의 create 타입 태그가 없습니다.")
+                return
+
+            print(f"\n사용자 {self.user_id}의 create 태그 처리 시작")
+            added_tag_ids = {tag.id for tag in resource.tags}  # 기존 태그 ID 집합
+            
+            for tag in create_tags:
+                if tag.id not in added_tag_ids:
+                    print(f"Collect 태그 추가: {tag.tag} (ID: {tag.id})")
+                    resource.tags.append(tag)
+                    added_tag_ids.add(tag.id)
+                else:
+                    print(f"create 태그 중복 건너뛰기: {tag.tag}")
+                    
+            session.flush()
+            print(f"create 태그 처리 완료")
+            
+        except Exception as e:
+            print(f"create 태그 처리 중 오류 발생: {str(e)}")
+            session.rollback()
+            raise
+
     def add_default_tags(self, resource: Resource, session: Session) -> None:
         """Add default tags to a resource using tag IDs"""
         try:
@@ -553,6 +584,7 @@ class ImageProcessingSystem:
                     )
 
             self.add_default_tags(resource, session)
+            self.add_create_tags(resource, session)
             
         except Exception as e:
             logging.error(f"Error processing image {image_path}: {str(e)}")
