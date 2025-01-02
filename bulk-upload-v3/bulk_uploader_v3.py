@@ -255,33 +255,44 @@ class PromptParser:
         단일 리소스의 프롬프트를 처리하고 태그를 추가합니다.
         """
         print(f"\n리소스 ID {resource.id} 처리 시작")
-        print(f"프롬프트: {prompt_text[:100]}...")  # 프롬프트 앞부분만 출력
+        print(f"프롬프트: {prompt_text[:100]}...")
         
         converted_count = 0
+        added_tag_ids = set()  # 이미 추가된 태그 ID를 추적
         
         # 기존 태그 매핑 처리
         for search_term, tag_name in self.tag_mapping.items():
             if search_term.lower() in prompt_text.lower():
                 print(f"매칭된 검색어: {search_term} -> 태그: {tag_name}")
                 converted_tag = self._get_or_create_tag(session, tag_name)
-                if converted_tag:
+                if converted_tag and converted_tag.id not in added_tag_ids:
                     print(f"태그 추가: {tag_name} (ID: {converted_tag.id})")
                     resource.tags.append(converted_tag)
+                    added_tag_ids.add(converted_tag.id)
                     converted_count += 1
-
-        # Lora 태그 처리
-        lora_count = self._process_lora_tags(session, resource, prompt_text)
-        print(f"Lora 태그 처리 결과: {lora_count}개")
-        converted_count += lora_count
+                else:
+                    print(f"태그 중복 건너뛰기: {tag_name}")
         
-        print(f"리소스 {resource.id}에 총 {converted_count}개 태그 추가됨")
-        session.flush()  # 변경사항 즉시 반영
-        return converted_count
+        # Lora 태그 처리
+        try:
+            lora_count = self._process_lora_tags(session, resource, prompt_text, added_tag_ids)
+            print(f"Lora 태그 처리 결과: {lora_count}개")
+            converted_count += lora_count
+            
+            print(f"리소스 {resource.id}에 총 {converted_count}개 태그 추가됨")
+            session.flush()
+            return converted_count
+        except Exception as e:
+            print(f"태그 처리 중 오류 발생: {str(e)}")
+            raise
 
-    def _process_lora_tags(self, session: Session, resource: Resource, prompt_text: str) -> int:
+    def _process_lora_tags(self, session: Session, resource: Resource, prompt_text: str, added_tag_ids: set) -> int:
         """
         프롬프트 텍스트에서 Lora 태그를 처리하고 리소스에 태그를 추가합니다.
         """
+        if not prompt_text:
+            return 0
+            
         converted_count = 0
         lora_tags = self._extract_lora_tags(prompt_text)
         print(f"\nLora 태그 추출 결과: {lora_tags}")
@@ -295,12 +306,14 @@ class PromptParser:
                 print(f"Lora 직접 사용: {model_name}")
             
             base_tag = self._get_or_create_tag(session, tag_name)
-            if base_tag:
+            if base_tag and base_tag.id not in added_tag_ids:
                 print(f"Lora 태그 추가: {tag_name} (ID: {base_tag.id})")
                 resource.tags.append(base_tag)
+                added_tag_ids.add(base_tag.id)
                 converted_count += 1
+            else:
+                print(f"Lora 태그 중복 건너뛰기: {tag_name}")
         
-        session.flush()  # 변경사항 즉시 반영
         return converted_count
 
     def process_resources(self, session: Session, resources: List[Resource], prompt_field: str = 'prompt') -> int:
