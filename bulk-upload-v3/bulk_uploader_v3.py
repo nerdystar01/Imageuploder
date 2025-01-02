@@ -516,7 +516,12 @@ class ImageProcessingSystem:
                     geninfo, params, resource, session, geninfo
                 )
                 if params.get("Prompt"):
-                    self.prompt_parser._process_single_resource(resource, params["Prompt"])
+                    # 이 부분이 수정된 부분입니다.
+                    self.prompt_parser._process_single_resource(
+                        session=session,
+                        resource=resource,
+                        prompt_text=params["Prompt"]
+                    )
 
             self.add_default_tags(resource, session)
             
