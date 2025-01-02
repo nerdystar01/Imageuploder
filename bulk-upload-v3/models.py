@@ -5,7 +5,8 @@ import io
 import logging
 import re
 from typing import Tuple, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone  # timezone import 추가
+
 import uuid
 from urllib.parse import quote_plus
 
@@ -76,17 +77,16 @@ class User(Base):
    color_code_tags = relationship("ColorCodeTags", back_populates="user")
 
 class ResourceTagV2(Base):
-    __tablename__ = 'resource_tag_v2'
-   
-    id = Column(Integer, primary_key=True)
-    resource_id = Column('resource_id', Integer, ForeignKey('resource.id'))
-    tag_id = Column('tag_id', Integer, ForeignKey('color_code_tags.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+   __tablename__ = 'resource_tag_v2'
+   id = Column(Integer, primary_key=True)
+   resource_id = Column('resource_id', Integer, ForeignKey('resource.id'))
+   tag_id = Column('tag_id', Integer, ForeignKey('color_code_tags.id')) 
+   created_at = Column(DateTime, default=datetime.now)
+   updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # 관계 설정
-    resource = relationship("Resource", backref="resource_tags")
-    tag = relationship("ColorCodeTags", backref="tag_resources")
+   resource = relationship("Resource", backref="resource_tags")
+   tag = relationship("ColorCodeTags", backref="tag_resources")
 
 class Resource(Base):
    __tablename__ = 'resource'
@@ -158,8 +158,8 @@ class Resource(Base):
    gpt_vision_score = Column(Integer, nullable=True)
 
    # Timestamps
-   created_at = Column(DateTime, default=datetime.utcnow)
-   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+   created_at = Column(DateTime, default=datetime.now)
+   updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
    # Relationships
    tags = relationship(
@@ -184,8 +184,8 @@ class ColorCodeTags(Base):
    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
 
    # Timestamps
-   created_at = Column(DateTime, default=datetime.utcnow)
-   updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+   created_at = Column(DateTime, default=datetime.now)
+   updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
    # Relationships
    resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
