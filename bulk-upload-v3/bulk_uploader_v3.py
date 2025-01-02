@@ -20,7 +20,7 @@ from google.oauth2 import service_account
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 # Local Imports
-from .models import (
+from models import (
     setup_database_engine,
     Resource,
     User,
