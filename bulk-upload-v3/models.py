@@ -84,9 +84,6 @@ class ResourceTagV2(Base):
    created_at = Column(DateTime, default=datetime.now)
    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # 관계 설정
-   resource = relationship("Resource", backref="resource_tags")
-   tag = relationship("ColorCodeTags", backref="tag_resources")
 
 class Resource(Base):
    __tablename__ = 'resource'
@@ -165,9 +162,7 @@ class Resource(Base):
    tags = relationship(
         "ColorCodeTags",
         secondary="resource_tag_v2",
-        primaryjoin="Resource.id==ResourceTagV2.resource_id",
-        secondaryjoin="ResourceTagV2.tag_id==ColorCodeTags.id",
-        back_populates="resources"
+        lazy='joined'
     )
    likes = relationship("User", secondary=resource_likes, back_populates="liked_resources")
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
@@ -188,7 +183,11 @@ class ColorCodeTags(Base):
    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
    # Relationships
-   resources = relationship("Resource", secondary=resource_tags, back_populates="tags")
+   resources = relationship(
+        "Resource",
+        secondary="resource_tag_v2",
+        lazy='joined'
+    )
    user = relationship("User", back_populates="color_code_tags")
 
    def __repr__(self):
