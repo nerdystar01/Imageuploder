@@ -37,10 +37,10 @@ resource_likes = Table(
 )
 
 resource_tags = Table(
-   'resource_tag_v2',  # 테이블 이름 수정
+   'resource_tags', 
    Base.metadata,
    Column('resource_id', Integer, ForeignKey('resource.id')),
-   Column('tag_id', Integer, ForeignKey('color_code_tags.id'))  # 컬럼명 수정
+   Column('colorcodetagss_id', Integer, ForeignKey('color_code_tags.id'))
 )
 
 resource_hidden_users = Table(
@@ -149,12 +149,7 @@ class Resource(Base):
    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
    # Relationships
-   tags = relationship(
-        "ColorCodeTags",
-        secondary=resource_tags,
-        back_populates="resources",
-        lazy='joined'
-    )
+   tags = relationship("ColorCodeTags", secondary=resource_tags, back_populates="resources")
    likes = relationship("User", secondary=resource_likes, back_populates="liked_resources")
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
