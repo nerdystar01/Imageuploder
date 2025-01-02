@@ -1,0 +1,5 @@
+# .gitignore 파일에 다음 내용 추가
+*.json
+wcidfu-ssh
+__pycache__/
+.DS_Store
