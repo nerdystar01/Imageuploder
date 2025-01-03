@@ -613,35 +613,48 @@ class ImageProcessingSystem:
         try:
             folder_name = os.path.basename(folder_path)
             
-            # Process images in parallel
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                # Submit all tasks and create future mapping
-                futures = {
-                    executor.submit(
-                        self.process_single_image,
-                        os.path.join(folder_path, img),
-                        session
-                    ): img for img in image_files
-                }
+            # 배치 크기 설정
+            BATCH_SIZE = 5
+            total_batches = (len(image_files) + BATCH_SIZE - 1) // BATCH_SIZE
+            
+            for batch_idx in range(total_batches):
+                start_idx = batch_idx * BATCH_SIZE
+                end_idx = min(start_idx + BATCH_SIZE, len(image_files))
+                batch_files = image_files[start_idx:end_idx]
                 
-                # Process futures with progress bar
-                for future in tqdm(
-                    as_completed(futures), 
-                    total=len(futures),
-                    desc=f"Processing images in {folder_name}"
-                ):
-                    img = futures[future]
-                    try:
-                        future.result()
-                    except Exception as e:
-                        logging.error(f"Error processing {img}: {e}")
-                        
+                # Process images in parallel
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    # Submit all tasks and create future mapping
+                    futures = {
+                        executor.submit(
+                            self.process_single_image,
+                            os.path.join(folder_path, img),
+                            session
+                        ): img for img in batch_files
+                    }
+                    
+                    # Process futures with progress bar
+                    for future in tqdm(
+                        as_completed(futures), 
+                        total=len(futures),
+                        desc=f"Processing batch {batch_idx + 1}/{total_batches}"
+                    ):
+                        img = futures[future]
+                        try:
+                            future.result()
+                        except Exception as e:
+                            logging.error(f"Error processing {img}: {e}")
+                
+                # 각 배치가 끝날 때마다 커밋
+                session.commit()
+                            
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
+            session.rollback()
             raise
-            
+                
         finally:
-            # Clean up
+            # Clean up - 모든 작업이 완료된 후에만 세션 종료
             self.utils.end_session(session)
 
     # def process_folder(self, folder_path: str) -> None:
