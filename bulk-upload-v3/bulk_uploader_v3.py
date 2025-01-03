@@ -630,15 +630,16 @@ class ImageProcessingSystem:
                     img = futures[future]
                     try:
                         future.result()
-                        session.commit()
                     except Exception as e:
                         logging.error(f"Error processing {img}: {e}")
                         
+            session.commit()
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
             raise
                 
         finally:
+            session.remove()
             self.utils.end_session(session)
 
     # def process_folder(self, folder_path: str) -> None:
