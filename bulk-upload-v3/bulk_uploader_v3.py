@@ -8,7 +8,9 @@ from typing import Tuple, Dict, Any, List
 from datetime import datetime
 import yaml
 
+
 # Third Party Libraries
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image, PngImagePlugin
 import piexif
 import piexif.helper
@@ -591,10 +593,10 @@ class ImageProcessingSystem:
             raise
 
     def process_folder(self, folder_path: str) -> None:
-        """Process all images in a folder"""
+        """Process all images in a folder using thread pool"""
         if not os.path.exists(folder_path):
             raise ValueError(f"Folder path does not exist: {folder_path}")
-        
+
         # Get all image files
         image_files = [
             f for f in os.listdir(folder_path)
@@ -604,16 +606,36 @@ class ImageProcessingSystem:
         if not image_files:
             logging.warning(f"No image files found in {folder_path}")
             return
-        
+
         # Start SSH tunnel and get session
         session, server = self.utils.get_session()
         
         try:
-            # Process images with progress bar
-            for image_file in tqdm(image_files, desc="Processing images"):
-                image_path = os.path.join(folder_path, image_file)
-                self.process_single_image(image_path, session)
+            folder_name = os.path.basename(folder_path)
+            
+            # Process images in parallel
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Submit all tasks and create future mapping
+                futures = {
+                    executor.submit(
+                        self.process_single_image,
+                        os.path.join(folder_path, img),
+                        session
+                    ): img for img in image_files
+                }
                 
+                # Process futures with progress bar
+                for future in tqdm(
+                    as_completed(futures), 
+                    total=len(futures),
+                    desc=f"Processing images in {folder_name}"
+                ):
+                    img = futures[future]
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logging.error(f"Error processing {img}: {e}")
+                        
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
             raise
@@ -621,6 +643,38 @@ class ImageProcessingSystem:
         finally:
             # Clean up
             self.utils.end_session(session)
+
+    # def process_folder(self, folder_path: str) -> None:
+    #     """Process all images in a folder"""
+    #     if not os.path.exists(folder_path):
+    #         raise ValueError(f"Folder path does not exist: {folder_path}")
+        
+    #     # Get all image files
+    #     image_files = [
+    #         f for f in os.listdir(folder_path)
+    #         if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    #     ]
+        
+    #     if not image_files:
+    #         logging.warning(f"No image files found in {folder_path}")
+    #         return
+        
+    #     # Start SSH tunnel and get session
+    #     session, server = self.utils.get_session()
+        
+    #     try:
+    #         # Process images with progress bar
+    #         for image_file in tqdm(image_files, desc="Processing images"):
+    #             image_path = os.path.join(folder_path, image_file)
+    #             self.process_single_image(image_path, session)
+                
+    #     except Exception as e:
+    #         logging.error(f"Error processing folder: {str(e)}")
+    #         raise
+            
+    #     finally:
+    #         # Clean up
+    #         self.utils.end_session(session)
     
 def get_user_input():
     """Get interactive user input for processing parameters"""
