@@ -641,6 +641,7 @@ class ImageProcessingSystem:
         finally:
             session.remove()
             self.utils.end_session(session)
+            self.utils.stop_ssh_tunnel()
 
     # def process_folder(self, folder_path: str) -> None:
     #     """Process all images in a folder"""
