@@ -630,6 +630,7 @@ class ImageProcessingSystem:
                     img = futures[future]
                     try:
                         future.result()
+                        session.commit()
                     except Exception as e:
                         logging.error(f"Error processing {img}: {e}")
                         
