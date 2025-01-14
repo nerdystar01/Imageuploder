@@ -18,6 +18,8 @@ from models import (
     ColorCodeTags
 )
 from tag_mappings import CharacterManager, OutfitManager, EventManager
+from concurrent.futures import ThreadPoolExecutor
+
 
 from sqlalchemy.orm import Session
 from models import ColorCodeTags
