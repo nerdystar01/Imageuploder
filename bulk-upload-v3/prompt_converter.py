@@ -375,20 +375,42 @@ class Converter:
                 animation_thread.join()
                 print('\n데이터 로딩 완료')
 
+            # 세션 팩토리 생성
+            Session = sessionmaker(bind=session.get_bind())
+
+            def process_resource(resource):
+                """각 리소스를 처리하는 함수"""
+                if not resource.prompt:
+                    return 0
+                    
+                # 각 쓰레드마다 새로운 세션 생성
+                thread_session = Session()
+                try:
+                    # 리소스 재조회 (새로운 세션에서)
+                    resource = thread_session.merge(resource)
+                    converted = self._process_single_resource(
+                        session=thread_session,
+                        resource=resource,
+                        prompt_text=resource.prompt
+                    )
+                    thread_session.commit()
+                    return converted or 0
+                except Exception as e:
+                    logging.error(f"리소스 {resource.id} 처리 중 오류 발생: {str(e)}")
+                    thread_session.rollback()
+                    return 0
+                finally:
+                    thread_session.close()
+
             total_converted = 0
-            for resource in tqdm(resources, desc="리소스 처리 중"):
-                if resource.prompt:
-                    try:
-                        converted = self._process_single_resource(
-                            session=session,
-                            resource=resource,
-                            prompt_text=resource.prompt
-                        )
-                        if converted:
-                            total_converted += converted
-                    except Exception as e:
-                        logging.error(f"리소스 {resource.id} 처리 중 오류 발생: {str(e)}")
-                        continue
+            with ThreadPoolExecutor(max_workers=12) as executor:
+                # tqdm으로 진행상황 표시
+                futures = list(tqdm(
+                    executor.map(process_resource, resources),
+                    total=len(resources),
+                    desc="리소스 처리 중"
+                ))
+                total_converted = sum(filter(None, futures))
 
             print(f"\n처리 완료: 총 {total_converted}개의 태그가 추가되었습니다.")
 
