@@ -223,6 +223,7 @@ class PromptParser:
         self.tag_mapping = TAG_MAPPING
         # Lora 태그를 찾기 위한 정규식 패턴
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'
+        self.added_tag_ids = set()
 
     def _get_or_create_tag(self, session: Session, tag_name: str) -> ColorCodeTags:
         """
@@ -547,21 +548,37 @@ class ImageProcessingSystem:
             session.rollback()
             raise
 
+    # def add_default_tags(self, resource: Resource, session: Session) -> None:
+    #     """Add default tags to a resource using tag IDs"""
+    #     try:
+    #         for tag_id in self.default_tag_ids:
+    #             tag = session.query(ColorCodeTags).filter_by(id=tag_id).first()
+    #             if tag:
+    #                 resource.tags.append(tag)
+    #             else:
+    #                 logging.warning(f"Tag ID {tag_id} not found in database")
+    #         session.commit()
+    #     except Exception as e:
+    #         logging.error(f"Error adding default tags: {str(e)}")
+    #         session.rollback()
+
     def add_default_tags(self, resource: Resource, session: Session) -> None:
         """Add default tags to a resource using tag IDs"""
         try:
+            existing_tag_ids = {tag.id for tag in resource.tags}
+            
             for tag_id in self.default_tag_ids:
-                tag = session.query(ColorCodeTags).filter_by(id=tag_id).first()
-                if tag:
-                    resource.tags.append(tag)
-                else:
-                    logging.warning(f"Tag ID {tag_id} not found in database")
+                if tag_id not in existing_tag_ids:
+                    tag = session.query(ColorCodeTags).filter_by(id=tag_id).first()
+                    if tag:
+                        resource.tags.append(tag)
             session.commit()
+                
         except Exception as e:
             logging.error(f"Error adding default tags: {str(e)}")
             session.rollback()
         
-    def process_single_image(self, image_path: str, session: Session) -> None:
+    def process_single_image(self, image_path: str, session: Session):
         try:
             original_image = Image.open(image_path)
             image_128 = self.png_util.scale_image_by_height(original_image, 128)
@@ -578,45 +595,98 @@ class ImageProcessingSystem:
                     geninfo, params, resource, session, geninfo
                 )
                 if params.get("Prompt"):
-                    # 이 부분이 수정된 부분입니다.
                     self.prompt_parser._process_single_resource(
                         session=session,
                         resource=resource,
                         prompt_text=params["Prompt"]
                     )
 
-            self.add_default_tags(resource, session)
-            self.add_create_tags(resource, session)
             
+            self.add_create_tags(resource, session)
+            self.add_default_tags(resource, session)
+
+
+            return resource  # resource 객체 자체를 반환
+
         except Exception as e:
             logging.error(f"Error processing image {image_path}: {str(e)}")
             raise
+
+    # def process_folder(self, folder_path: str) -> None:
+    #     """Process images in parallel, each worker handling its own image"""
+    #     if not os.path.exists(folder_path):
+    #         raise ValueError(f"Folder path does not exist: {folder_path}")
+
+    #     image_files = [
+    #         f for f in os.listdir(folder_path)
+    #         if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    #     ]
+        
+    #     if not image_files:
+    #         logging.warning(f"No image files found in {folder_path}")
+    #         return
+
+    #     # Start SSH tunnel and get session
+    #     session, server = self.utils.get_session()
+        
+    #     num = 0
+
+    #     try:
+    #         folder_name = os.path.basename(folder_path)
+            
+    #         # 5개의 워커가 동시에 각자의 이미지를 처리
+    #         with ThreadPoolExecutor(max_workers=10) as executor:
+    #             futures = {
+    #                 executor.submit(
+    #                     self.process_single_image,
+    #                     os.path.join(folder_path, img),
+    #                     session
+    #                 ): img for img in image_files
+    #             }
+                
+    #             for future in tqdm(
+    #                 as_completed(futures), 
+    #                 total=len(futures),
+    #                 desc=f"Processing images in {folder_name}"
+    #             ):
+    #                 img = futures[future]
+    #                 try:
+    #                     future.result()
+    #                 except Exception as e:
+    #                     logging.error(f"Error processing {img}: {e}")
+                        
+    #         session.commit()
+    #     except Exception as e:
+    #         logging.error(f"Error processing folder: {str(e)}")
+    #         raise
+                
+    #     finally:
+    #         session.remove()
 
     def process_folder(self, folder_path: str) -> None:
         """Process images in parallel, each worker handling its own image"""
         if not os.path.exists(folder_path):
             raise ValueError(f"Folder path does not exist: {folder_path}")
-
-        image_files = [
-            f for f in os.listdir(folder_path)
-            if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-        ]
+        
+        image_files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))])
         
         if not image_files:
             logging.warning(f"No image files found in {folder_path}")
             return
-
-        # Start SSH tunnel and get session
+            
         session, server = self.utils.get_session()
+        first_id = None
+        last_id = None
+        num = 0
+        total_images = len(image_files)
         
         try:
             folder_name = os.path.basename(folder_path)
             
-            # 5개의 워커가 동시에 각자의 이미지를 처리
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=12) as executor:
                 futures = {
                     executor.submit(
-                        self.process_single_image,
+                        self.process_single_image, 
                         os.path.join(folder_path, img),
                         session
                     ): img for img in image_files
@@ -629,19 +699,25 @@ class ImageProcessingSystem:
                 ):
                     img = futures[future]
                     try:
-                        future.result()
+                        result = future.result()  # assuming this returns some object with an id
+                        num += 1
+                        
+                        if num == 1:  # 첫 번째 결과
+                            first_id = result.id
+                        if num == total_images:  # 마지막 결과
+                            last_id = result.id
+
                     except Exception as e:
                         logging.error(f"Error processing {img}: {e}")
-                        
-            session.commit()
+                        session.commit()
+            
+            logging.info(f"Processing completed - First ID: {first_id}, Last ID: {last_id}, Total Images: {total_images}")
+            
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
             raise
-                
         finally:
             session.remove()
-            self.utils.end_session(session)
-            self.utils.stop_ssh_tunnel()
 
     # def process_folder(self, folder_path: str) -> None:
     #     """Process all images in a folder"""
@@ -803,6 +879,7 @@ def main():
         print("오류가 발생했습니다. 로그를 확인해주세요.")
     except KeyboardInterrupt:
         print("\n프로그램이 중단되었습니다.")
-
+    finally:
+        utils.stop_ssh_tunnel()
 if __name__ == "__main__":
     main()
