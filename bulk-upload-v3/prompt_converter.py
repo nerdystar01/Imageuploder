@@ -4,6 +4,10 @@ import sys
 import logging
 from typing import List, Tuple
 import re
+import threading
+import time
+import itertools
+import sys
 
 # Third Party Libraries
 from tqdm import tqdm
@@ -154,22 +158,23 @@ class TagExtensions:
             print(f"4GROUND9 태그 처리 중 오류 발생: {str(e)}")
             self.session.rollback()
 
+    # === TagExtensions의 check_lora_tag 메소드 수정 === #
     def check_lora_tag(self, prompt_text: str, resource, added_tag_ids: set) -> None:
-        """프롬프트에서 로라 태그를 확인하고 추가합니다."""
         if not prompt_text:
             return
 
         try:
-            # 로라 태그 추출
             lora_matches = re.findall(self.lora_regex, prompt_text)
             if not lora_matches:
                 return
                 
             print(f"\n로라 태그 추출 결과: {lora_matches}")
             
+            current_tags = {tag.tag for tag in resource.tags}
+            
             for model_name, weight in lora_matches:
                 try:
-                    # 태그 조회 또는 생성
+                    # 여기서 직접 session을 사용해야 함
                     tag = self.session.query(ColorCodeTags).filter_by(tag=model_name).first()
                     if tag is None:
                         tag = ColorCodeTags(
@@ -180,21 +185,20 @@ class TagExtensions:
                         self.session.commit()
                         print(f"새로운 태그 생성됨: {model_name}")
                     
-                    # 태그 추가
                     if tag.id not in added_tag_ids:
                         print(f"로라 태그 추가: {model_name} (ID: {tag.id})")
                         resource.tags.append(tag)
                         added_tag_ids.add(tag.id)
                     else:
                         print(f"로라 태그 중복 건너뛰기: {model_name}")
-                        
+                            
                 except Exception as e:
                     print(f"태그 생성/조회 중 오류 발생: {str(e)}")
                     self.session.rollback()
                     continue
 
             self.session.commit()
-            
+                
         except Exception as e:
             print(f"로라 태그 처리 중 오류 발생: {str(e)}")
             self.session.rollback()
@@ -214,17 +218,14 @@ class Converter:
         }
 
     def _process_single_resource(self, session: Session, resource: Resource, prompt_text: str) -> int:
-        """단일 리소스의 프롬프트를 처리하고 태그를 추가합니다."""
         print(f"\n리소스 ID {resource.id} 처리 시작")
         
         converted_count = 0
-        added_tag_ids = {tag.id for tag in resource.tags}  # 이미 추가된 태그 ID를 추적
+        added_tag_ids = {tag.id for tag in resource.tags}
         
         try:
-            # 태그 익스텐션 초기화
             tag_extensions = TagExtensions(session, self.character_manager)
             
-            # 프롬프트 기반 태그 처리
             managers = [
                 (self.character_manager, "캐릭터"),
                 (self.outfit_manager, "의상"),
@@ -310,47 +311,48 @@ class Converter:
             raise
 
     def process_with_manager(
-            self, session: Session, resource: Resource, 
-            prompt_text: str, added_tag_ids: set, manager
-        ) -> int:
-        """각 매니저를 사용하여 프롬프트를 처리하고 태그를 추가합니다."""
+        self, session: Session, resource: Resource, 
+        prompt_text: str, added_tag_ids: set, manager
+    ) -> int:
         converted_count = 0
-        prompt_text = prompt_text.lower()  # 프롬프트 텍스트를 소문자로 변환
+        prompt_text = prompt_text.lower()
         
-        # 각 아이템(캐릭터/의상/이벤트)에 대해
+        current_tags = {tag.tag for tag in resource.tags}
+        
         for standard_name, item in manager.items.items():
-            # 해당 아이템의 모든 별칭에 대해
             for alias in item.aliases:
-                # 별칭이 프롬프트 텍스트에 있는지 확인
                 if alias.lower() in prompt_text:
-                    print(f"매칭된 태그: {alias} -> {standard_name}")
-                    
-                    try:
-                        # 태그 조회 또는 생성
-                        tag = self._get_or_create_tag(session, standard_name)
+                    # 이미 존재하는 태그인지 확인
+                    if standard_name in current_tags:
+                        print(f"태그 건너뛰기 (이미 존재): {standard_name}")
+                        break
                         
-                        # 중복되지 않은 경우에만 태그 추가
-                        if tag and tag.id not in added_tag_ids:
-                            print(f"태그 추가: {standard_name} (ID: {tag.id})")
-                            resource.tags.append(tag)
-                            added_tag_ids.add(tag.id)
-                            converted_count += 1
-                            # 하나의 별칭이 매칭되면 다음 아이템으로 이동
-                            break
-                        else:
-                            print(f"태그 중복 건너뛰기: {standard_name}")
-                            
+                    print(f"매칭된 태그: {alias} -> {standard_name}")
+                    try:
+                        tag = self._get_or_create_tag(session, standard_name)
+                        resource.tags.append(tag)
+                        added_tag_ids.add(tag.id)
+                        converted_count += 1
+                        print(f"태그 추가됨: {standard_name}")
+                        session.commit()
                     except Exception as e:
                         print(f"태그 처리 중 오류 발생: {str(e)}")
                         session.rollback()
-                        continue
+                    break
         
         return converted_count
 
-    def process_resources(self, start_id: int = None, end_id: int = None):
+    def loading_animation(self, stop_event):
+        """로딩 애니메이션을 표시하는 함수"""
+        spinner = itertools.cycle(['', '.', '..', '...'])
+        while not stop_event.is_set():
+            sys.stdout.write('\r리소스 데이터를 불러오는 중' + next(spinner))
+            sys.stdout.flush()
+            time.sleep(0.5)
+
+
+    def process_resources(self, session: Session, start_id: int = None, end_id: int = None):
         """지정된 범위의 리소스들의 프롬프트를 처리합니다."""
-        session, server = self.get_session()
-        
         try:
             # 리소스 쿼리 구성
             query = session.query(Resource)
@@ -358,57 +360,42 @@ class Converter:
                 query = query.filter(Resource.id >= start_id)
             if end_id is not None:
                 query = query.filter(Resource.id <= end_id)
-                
+                    
             total_resources = query.count()
             print(f"\n총 {total_resources}개의 리소스를 처리합니다.")
             
+            stop_animation = threading.Event()
+            animation_thread = threading.Thread(target=self.loading_animation, args=(stop_animation,))
+            animation_thread.start()
+
+            try:
+                resources = query.all()
+            finally:
+                stop_animation.set()
+                animation_thread.join()
+                print('\n데이터 로딩 완료')
+
             total_converted = 0
-            resources = list(tqdm(query.all(), desc="리소스 로딩 중"))  # 진행률 표시와 함께 리소스 로드
-            
-            # 프롬프트가 있는 리소스만 필터링
-            resources_to_process = [r for r in resources if r.prompt]
-            
-            # ThreadPoolExecutor를 사용한 병렬 처리
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                # 진행률 표시를 위한 tqdm 설정
-                pbar = tqdm(total=len(resources_to_process), desc="리소스 처리 중")
-                
-                def process_and_update(resource):
+            for resource in tqdm(resources, desc="리소스 처리 중"):
+                if resource.prompt:
                     try:
-                        result = self._process_single_resource(
+                        converted = self._process_single_resource(
                             session=session,
                             resource=resource,
                             prompt_text=resource.prompt
                         )
-                        pbar.update(1)
-                        return result
+                        if converted:
+                            total_converted += converted
                     except Exception as e:
                         logging.error(f"리소스 {resource.id} 처리 중 오류 발생: {str(e)}")
-                        pbar.update(1)
-                        return 0
-                
-                # 병렬 처리 실행
-                futures = [executor.submit(process_and_update, resource) 
-                        for resource in resources_to_process]
-                
-                # 결과 수집
-                for future in futures:
-                    try:
-                        converted = future.result()
-                        total_converted += converted if converted else 0
-                    except Exception as e:
-                        logging.error(f"Future 처리 중 오류 발생: {str(e)}")
-                
-                pbar.close()
-            
+                        continue
+
             print(f"\n처리 완료: 총 {total_converted}개의 태그가 추가되었습니다.")
-            
+
         except Exception as e:
             logging.error(f"리소스 처리 중 오류 발생: {str(e)}")
+            print(f"에러 발생: {str(e)}")
             raise
-        finally:
-            session.remove()
-            self.stop_ssh_tunnel()
 
 def get_user_input() -> Tuple[int, int]:
     """시작 ID와 종료 ID를 입력받습니다."""
@@ -475,17 +462,19 @@ def get_extension_options(session: Session) -> dict:
     return options
 
 def main():
-    # 로깅 설정
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
     
+    # SSH 터널과 세션 생성은 한 번만
+    converter = None
+    session = None
+    server = None
+    
     try:
-        # 사용자 입력 받기
         start_id, end_id = get_user_input()
         
-        # 처리 정보 출력
         print("\n처리 정보:")
         print(f"시작 ID: {start_id if start_id else '처음부터'}")
         print(f"종료 ID: {end_id if end_id else '끝까지'}")
@@ -496,38 +485,33 @@ def main():
         # 세션 생성
         session, server = converter.get_session()
         
-        try:
-            # 태그 익스텐션 옵션 설정 (세션 전달)
-            extension_options = get_extension_options(session)
-            
-            # 설정 정보 출력
-            print("\n=== 설정된 옵션 ===")
-            print(f"Multiple 태그 추가: {'예' if extension_options['use_multiple_tag'] else '아니오'}")
-            print(f"4GROUND9 태그 검사: {'예' if extension_options['check_4ground9'] else '아니오'}")
-            print(f"태그 전환: {'예' if extension_options['convert_tags'] else '아니오'}")
-            if extension_options['convert_tags']:
-                print(f"- 전환: {extension_options['from_tag_id']} -> {extension_options['to_tag_id']}")
-            
-            # 확인
-            confirm = input("\n위 설정으로 처리를 시작하시겠습니까? (y/n): ").strip().lower()
-            if confirm != 'y':
-                print("프로그램을 종료합니다.")
-                return
-            
-            # converter의 옵션 설정
-            converter.extension_options = extension_options
-            
-            # 변환 처리
-            converter.process_resources(start_id, end_id)
-            
-        finally:
-            session.remove()
-            server.stop()
+        # 태그 익스텐션 옵션 설정
+        extension_options = get_extension_options(session)
+        
+        print("\n=== 설정된 옵션 ===")
+        print(f"Multiple 태그 추가: {'예' if extension_options['use_multiple_tag'] else '아니오'}")
+        print(f"4GROUND9 태그 검사: {'예' if extension_options['check_4ground9'] else '아니오'}")
+        print(f"태그 전환: {'예' if extension_options['convert_tags'] else '아니오'}")
+        if extension_options['convert_tags']:
+            print(f"- 전환: {extension_options['from_tag_id']} -> {extension_options['to_tag_id']}")
+        
+        confirm = input("\n위 설정으로 처리를 시작하시겠습니까? (y/n): ").strip().lower()
+        if confirm != 'y':
+            print("프로그램을 종료합니다.")
+            return
+        
+        converter.extension_options = extension_options
+        converter.process_resources(session=session, start_id=start_id, end_id=end_id)
         
     except KeyboardInterrupt:
         print("\n프로그램이 중단되었습니다.")
     except Exception as e:
         logging.error(f"처리 중 오류가 발생했습니다: {str(e)}")
+    finally:
+        if session:
+            session.remove()
+        if server:
+            server.stop()
     
 if __name__ == "__main__":
     main()
