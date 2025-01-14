@@ -399,7 +399,6 @@ def get_user_input() -> Tuple[int, int]:
         sys.exit(1)
 
 def get_extension_options(session: Session) -> dict:
-    """태그 익스텐션 옵션을 사용자로부터 입력받습니다."""
     options = {}
     
     print("\n=== 태그 익스텐션 설정 ===")
@@ -418,12 +417,12 @@ def get_extension_options(session: Session) -> dict:
     print("\n=== 태그 전환 설정 ===")
     print("태그 전환 쌍을 입력하세요. 종료하려면 엔터를 입력하세요.")
     
-    options['tag_conversions'] = []
-    while True:
-        from_id = input("\n전환할 태그 ID (종료하려면 엔터): ").strip()
-        if not from_id:
-            break
-            
+    options['convert_tags'] = False  # 기본값 설정
+    options['from_tag_id'] = None
+    options['to_tag_id'] = None
+    
+    from_id = input("\n전환할 태그 ID (종료하려면 엔터): ").strip()
+    if from_id:
         to_id = input("새로운 태그 ID: ").strip()
         try:
             from_tag_id = int(from_id)
@@ -434,18 +433,17 @@ def get_extension_options(session: Session) -> dict:
             to_tag = session.query(ColorCodeTags).filter_by(id=to_tag_id).first()
             
             if not from_tag:
-                print(f"전환할 태그 ID {from_tag_id}가 존재하지 않습니다. 이 전환은 건너뜁니다.")
-                continue
+                print(f"전환할 태그 ID {from_tag_id}가 존재하지 않습니다.")
+            elif not to_tag:
+                print(f"새로운 태그 ID {to_tag_id}가 존재하지 않습니다.")
+            else:
+                options['convert_tags'] = True
+                options['from_tag_id'] = from_tag_id
+                options['to_tag_id'] = to_tag_id
+                print(f"태그 전환 추가됨: {from_tag.tag}({from_tag_id}) -> {to_tag.tag}({to_tag_id})")
                 
-            if not to_tag:
-                print(f"새로운 태그 ID {to_tag_id}가 존재하지 않습니다. 이 전환은 건너뜁니다.")
-                continue
-            
-            options['tag_conversions'].append((from_tag_id, to_tag_id))
-            print(f"태그 전환 추가됨: {from_tag.tag}({from_tag_id}) -> {to_tag.tag}({to_tag_id})")
-            
         except ValueError:
-            print("올바른 태그 ID를 입력해주세요. 이 전환은 건너뜁니다.")
+            print("올바른 태그 ID를 입력해주세요.")
     
     return options
 
