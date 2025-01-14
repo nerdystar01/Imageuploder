@@ -361,17 +361,29 @@ class Converter:
             print(f"\n총 {total_resources}개의 리소스를 처리합니다.")
             
             total_converted = 0
-            for resource in tqdm(query.all(), desc="리소스 처리 중"):
-                if resource.prompt:  # prompt가 있는 경우만 처리
-                    try:
-                        converted = self._process_single_resource(
+            resources = query.all()  # 모든 리소스를 미리 가져옴
+            
+            # ThreadPoolExecutor를 사용한 병렬 처리
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # 각 리소스에 대한 future 생성
+                futures = []
+                for resource in resources:
+                    if resource.prompt:  # prompt가 있는 경우만 처리
+                        future = executor.submit(
+                            self._process_single_resource,
                             session=session,
                             resource=resource,
                             prompt_text=resource.prompt
                         )
-                        total_converted += converted
+                        futures.append(future)
+                
+                # tqdm으로 진행률 표시하면서 결과 처리
+                for future in tqdm(futures, desc="리소스 처리 중"):
+                    try:
+                        converted = future.result()
+                        total_converted += converted if converted else 0
                     except Exception as e:
-                        logging.error(f"리소스 {resource.id} 처리 중 오류 발생: {str(e)}")
+                        logging.error(f"리소스 처리 중 오류 발생: {str(e)}")
                         continue
             
             print(f"\n처리 완료: 총 {total_converted}개의 태그가 추가되었습니다.")
