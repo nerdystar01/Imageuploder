@@ -363,30 +363,43 @@ class Converter:
             print(f"\n총 {total_resources}개의 리소스를 처리합니다.")
             
             total_converted = 0
-            resources = query.all()  # 모든 리소스를 미리 가져옴
+            resources = list(tqdm(query.all(), desc="리소스 로딩 중"))  # 진행률 표시와 함께 리소스 로드
+            
+            # 프롬프트가 있는 리소스만 필터링
+            resources_to_process = [r for r in resources if r.prompt]
             
             # ThreadPoolExecutor를 사용한 병렬 처리
             with ThreadPoolExecutor(max_workers=5) as executor:
-                # 각 리소스에 대한 future 생성
-                futures = []
-                for resource in resources:
-                    if resource.prompt:  # prompt가 있는 경우만 처리
-                        future = executor.submit(
-                            self._process_single_resource,
+                # 진행률 표시를 위한 tqdm 설정
+                pbar = tqdm(total=len(resources_to_process), desc="리소스 처리 중")
+                
+                def process_and_update(resource):
+                    try:
+                        result = self._process_single_resource(
                             session=session,
                             resource=resource,
                             prompt_text=resource.prompt
                         )
-                        futures.append(future)
+                        pbar.update(1)
+                        return result
+                    except Exception as e:
+                        logging.error(f"리소스 {resource.id} 처리 중 오류 발생: {str(e)}")
+                        pbar.update(1)
+                        return 0
                 
-                # tqdm으로 진행률 표시하면서 결과 처리
-                for future in tqdm(futures, desc="리소스 처리 중"):
+                # 병렬 처리 실행
+                futures = [executor.submit(process_and_update, resource) 
+                        for resource in resources_to_process]
+                
+                # 결과 수집
+                for future in futures:
                     try:
                         converted = future.result()
                         total_converted += converted if converted else 0
                     except Exception as e:
-                        logging.error(f"리소스 처리 중 오류 발생: {str(e)}")
-                        continue
+                        logging.error(f"Future 처리 중 오류 발생: {str(e)}")
+                
+                pbar.close()
             
             print(f"\n처리 완료: 총 {total_converted}개의 태그가 추가되었습니다.")
             
