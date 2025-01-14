@@ -464,27 +464,40 @@ def main():
         print("\n처리 정보:")
         print(f"시작 ID: {start_id if start_id else '처음부터'}")
         print(f"종료 ID: {end_id if end_id else '끝까지'}")
+
+        # Converter 인스턴스 생성
+        converter = Converter()
         
-        # 태그 익스텐션 옵션 설정
-        extension_options = get_extension_options()
+        # 세션 생성
+        session, server = converter.get_session()
         
-        # 설정 정보 출력
-        print("\n=== 설정된 옵션 ===")
-        print(f"Multiple 태그 추가: {'예' if extension_options['use_multiple_tag'] else '아니오'}")
-        print(f"4GROUND9 태그 검사: {'예' if extension_options['check_4ground9'] else '아니오'}")
-        print(f"태그 전환: {'예' if extension_options['convert_tags'] else '아니오'}")
-        if extension_options['convert_tags']:
-            print(f"- 전환: {extension_options['from_tag_id']} -> {extension_options['to_tag_id']}")
-        
-        # 확인
-        confirm = input("\n위 설정으로 처리를 시작하시겠습니까? (y/n): ").strip().lower()
-        if confirm != 'y':
-            print("프로그램을 종료합니다.")
-            return
+        try:
+            # 태그 익스텐션 옵션 설정 (세션 전달)
+            extension_options = get_extension_options(session)
             
-        # 변환 처리
-        converter = Converter(extension_options)
-        converter.process_resources(start_id, end_id)
+            # 설정 정보 출력
+            print("\n=== 설정된 옵션 ===")
+            print(f"Multiple 태그 추가: {'예' if extension_options['use_multiple_tag'] else '아니오'}")
+            print(f"4GROUND9 태그 검사: {'예' if extension_options['check_4ground9'] else '아니오'}")
+            print(f"태그 전환: {'예' if extension_options['convert_tags'] else '아니오'}")
+            if extension_options['convert_tags']:
+                print(f"- 전환: {extension_options['from_tag_id']} -> {extension_options['to_tag_id']}")
+            
+            # 확인
+            confirm = input("\n위 설정으로 처리를 시작하시겠습니까? (y/n): ").strip().lower()
+            if confirm != 'y':
+                print("프로그램을 종료합니다.")
+                return
+            
+            # converter의 옵션 설정
+            converter.extension_options = extension_options
+            
+            # 변환 처리
+            converter.process_resources(start_id, end_id)
+            
+        finally:
+            session.remove()
+            server.stop()
         
     except KeyboardInterrupt:
         print("\n프로그램이 중단되었습니다.")
