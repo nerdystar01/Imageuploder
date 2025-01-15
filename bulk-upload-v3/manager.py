@@ -330,7 +330,7 @@ class CharacterManager(BaseManager):
             # 단비
             'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,']),
             # 드와이트
-            'Dwight': BaseItem('Dwight', ['dwigh,', ]),
+            'Dwight': BaseItem('Dwight', ['dwight,', ]),
             # Ohm
             'Ohm': BaseItem('Ohm', ['ohm,', ]),
         }
