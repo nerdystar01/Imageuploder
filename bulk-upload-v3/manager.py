@@ -448,6 +448,7 @@ class EventManager(BaseManager):
             'alley': BaseItem('alley', ['alley,']),
             
             # 계절/이벤트
+            'get-promoted' : BaseItem('get-promoted', ['get-promoted,']),
             'autumn': BaseItem('autumn', ['autumn,']),
             'christmas': BaseItem('christmas', ['christmas,']),
             'flower': BaseItem('flower', ['flower,']),
