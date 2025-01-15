@@ -21,13 +21,12 @@ from models import (
     User,
     ColorCodeTags
 )
-from tag_mappings import CharacterManager, OutfitManager, EventManager
+from manager import CharacterManager, OutfitManager, EventManager
 from concurrent.futures import ThreadPoolExecutor
 
 
 from sqlalchemy.orm import Session
 from models import ColorCodeTags
-from tag_mappings import CharacterManager
 
 class TagExtensions:
     def __init__(self, session: Session, character_manager):

@@ -30,7 +30,7 @@ from models import (
     ColorCodeTags,
     SdModel
 )
-from tag_mappings import TAG_MAPPING
+from manager import CharacterManager, OutfitManager, EventManager
 
 
 
@@ -220,7 +220,7 @@ class PngUtill:
 # ------------------------------
 class PromptParser:
     def __init__(self):
-        self.tag_mapping = TAG_MAPPING
+        self.tag_mapping = create_tag_mapping()
         # Lora 태그를 찾기 위한 정규식 패턴
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'
         self.added_tag_ids = set()
@@ -825,6 +825,52 @@ def validate_inputs(session, user_id: int, tag_ids: list) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"데이터베이스 검증 중 오류 발생: {str(e)}"
 
+def create_tag_mapping() -> Dict[str, str]:
+    """
+    CharacterManager, OutfitManager, EventManager의 
+    별칭(aliases)들을 하나의 태그 매핑 딕셔너리로 변환합니다.
+    """
+    # 기존 매니저들 초기화
+    character_manager = CharacterManager()
+    outfit_manager = OutfitManager()
+    event_manager = EventManager()
+    
+    tag_mapping = {}
+    
+    # 각 매니저의 items를 순회하면서 태그 매핑 생성
+    managers = [
+        ('character', character_manager),
+        ('outfit', outfit_manager),
+        ('event', event_manager)
+    ]
+    
+    for manager_name, manager in managers:
+        for standard_name, item in manager.items.items():
+            # 각 별칭을 표준 이름에 매핑
+            for alias in item.aliases:
+                tag_mapping[alias] = standard_name
+    
+    return tag_mapping
+
+def save_tag_mapping(tag_mapping: Dict[str, str]):
+    """
+    생성된 태그 매핑을 현재 디렉토리의 tag_mappings.py 파일로 저장합니다.
+    """
+    import os
+    
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, 'tag_mappings.py')
+    
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("# Generated Tag Mapping\n\n")
+        f.write("TAG_MAPPING = {\n")
+        
+        # 알파벳 순으로 정렬하여 저장
+        for alias, standard_name in sorted(tag_mapping.items()):
+            f.write(f"    {repr(alias)}: {repr(standard_name)},\n")
+            
+        f.write("}\n")
+
 def main():
     # Configure logging
     logging.basicConfig(
@@ -836,6 +882,14 @@ def main():
         # Utils 인스턴스 생성
         utils = Utills()
         
+        tag_mapping = create_tag_mapping()
+        
+        # 매핑 결과 출력
+        print(f"총 {len(tag_mapping)}개의 태그 매핑이 생성되었습니다.")
+        
+        # 파일로 저장
+        save_tag_mapping(tag_mapping)
+
         # Get user input
         user_id, folder_path, default_tag_ids = get_user_input()
         
