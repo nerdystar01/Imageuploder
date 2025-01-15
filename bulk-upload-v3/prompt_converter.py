@@ -220,6 +220,7 @@ class Converter:
         self.extension_options = extension_options or {
             'use_multiple_tag': False,
             'check_4ground9': False,
+            'use_lora_tag' : False,
             'convert_tags': False,
             'from_tag_id': None,
             'to_tag_id': None
@@ -249,6 +250,9 @@ class Converter:
                 converted_count += count
             
             # 설정된 익스텐션 옵션에 따라 처리
+            if self.extension_options['use_lora_tag']:
+                tag_extensions.check_lora_tag(prompt_text, resource, added_tag_ids)    
+            
             if self.extension_options['use_multiple_tag']:
                 tag_extensions.check_multiple_characters(prompt_text, resource, added_tag_ids)
             
@@ -447,6 +451,10 @@ def get_extension_options(session: Session) -> dict:
     
     print("\n=== 태그 익스텐션 설정 ===")
     
+    options['use_lora_tag'] = input(
+        "프롬프트의 로라(<lora:...>) 태그를 추출하여 태그로 등록하시겠습니까? (y/n): "
+    ).strip().lower() == 'y'
+
     # Multiple 태그 옵션
     options['use_multiple_tag'] = input(
         "boy/girl 동시 존재시 Multiple 태그를 추가하시겠습니까? (y/n): "
