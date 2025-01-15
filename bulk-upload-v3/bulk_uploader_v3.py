@@ -5,8 +5,8 @@ import io
 import logging
 import re
 from typing import Tuple, Dict, Any, List
-from datetime import datetime
-import yaml
+import time
+
 
 
 # Third Party Libraries
@@ -612,57 +612,6 @@ class ImageProcessingSystem:
             logging.error(f"Error processing image {image_path}: {str(e)}")
             raise
 
-    # def process_folder(self, folder_path: str) -> None:
-    #     """Process images in parallel, each worker handling its own image"""
-    #     if not os.path.exists(folder_path):
-    #         raise ValueError(f"Folder path does not exist: {folder_path}")
-
-    #     image_files = [
-    #         f for f in os.listdir(folder_path)
-    #         if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-    #     ]
-        
-    #     if not image_files:
-    #         logging.warning(f"No image files found in {folder_path}")
-    #         return
-
-    #     # Start SSH tunnel and get session
-    #     session, server = self.utils.get_session()
-        
-    #     num = 0
-
-    #     try:
-    #         folder_name = os.path.basename(folder_path)
-            
-    #         # 5개의 워커가 동시에 각자의 이미지를 처리
-    #         with ThreadPoolExecutor(max_workers=10) as executor:
-    #             futures = {
-    #                 executor.submit(
-    #                     self.process_single_image,
-    #                     os.path.join(folder_path, img),
-    #                     session
-    #                 ): img for img in image_files
-    #             }
-                
-    #             for future in tqdm(
-    #                 as_completed(futures), 
-    #                 total=len(futures),
-    #                 desc=f"Processing images in {folder_name}"
-    #             ):
-    #                 img = futures[future]
-    #                 try:
-    #                     future.result()
-    #                 except Exception as e:
-    #                     logging.error(f"Error processing {img}: {e}")
-                        
-    #         session.commit()
-    #     except Exception as e:
-    #         logging.error(f"Error processing folder: {str(e)}")
-    #         raise
-                
-    #     finally:
-    #         session.remove()
-
     def process_folder(self, folder_path: str) -> None:
         """Process images in parallel, each worker handling its own image"""
         if not os.path.exists(folder_path):
@@ -677,8 +626,9 @@ class ImageProcessingSystem:
         session, server = self.utils.get_session()
         first_id = None
         last_id = None
-        num = 0
+        processed_count = 0
         total_images = len(image_files)
+        results = []  # Store all results
         
         try:
             folder_name = os.path.basename(folder_path)
@@ -692,26 +642,53 @@ class ImageProcessingSystem:
                     ): img for img in image_files
                 }
                 
-                for future in tqdm(
-                    as_completed(futures), 
-                    total=len(futures),
-                    desc=f"Processing images in {folder_name}"
-                ):
+                # Progress bar
+                pbar = tqdm(total=total_images, desc=f"Processing images in {folder_name}")
+                
+                # Process all futures
+                for future in as_completed(futures):
                     img = futures[future]
                     try:
-                        result = future.result()  # assuming this returns some object with an id
-                        num += 1
+                        result = future.result()
+                        processed_count += 1
+                        pbar.update(1)
                         
-                        if num == 1:  # 첫 번째 결과
-                            first_id = result.id
-                        if num == total_images:  # 마지막 결과
-                            last_id = result.id
-
+                        if result:
+                            results.append(result)
+                            if processed_count == 1:  # First result
+                                first_id = result.id
+                            if processed_count == total_images:  # Last result
+                                last_id = result.id
                     except Exception as e:
                         logging.error(f"Error processing {img}: {e}")
-                        session.commit()
+                        session.rollback()  # Rollback on error
+                
+                pbar.close()
+                
+                # Wait until all images are processed
+                waiting_start_time = time.time()
+                while processed_count < total_images:
+                    print(f"\r작업 대기 중... (처리된 이미지: {processed_count}/{total_images})", end="")
+                    time.sleep(1)  # 1초 딜레이
+                    
+                    # 5분(300초) 이상 대기했다면 경고 메시지 출력
+                    if time.time() - waiting_start_time > 300:
+                        print("\n경고: 작업이 5분 이상 지연되고 있습니다.")
+                        waiting_start_time = time.time()  # 타이머 리셋
+                
+                print("\n모든 이미지 처리가 완료되었습니다.")
+                
+                # Final commit after all processing is complete
+                try:
+                    session.commit()
+                    print("데이터베이스 커밋이 완료되었습니다.")
+                except Exception as e:
+                    logging.error(f"Error during final commit: {e}")
+                    session.rollback()
+                    raise
             
             logging.info(f"Processing completed - First ID: {first_id}, Last ID: {last_id}, Total Images: {total_images}")
+            logging.info(f"Successfully processed {len(results)} out of {total_images} images")
             
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
@@ -719,38 +696,6 @@ class ImageProcessingSystem:
         finally:
             session.remove()
 
-    # def process_folder(self, folder_path: str) -> None:
-    #     """Process all images in a folder"""
-    #     if not os.path.exists(folder_path):
-    #         raise ValueError(f"Folder path does not exist: {folder_path}")
-        
-    #     # Get all image files
-    #     image_files = [
-    #         f for f in os.listdir(folder_path)
-    #         if f.lower().endswith(('.png', '.jpg', '.jpeg'))
-    #     ]
-        
-    #     if not image_files:
-    #         logging.warning(f"No image files found in {folder_path}")
-    #         return
-        
-    #     # Start SSH tunnel and get session
-    #     session, server = self.utils.get_session()
-        
-    #     try:
-    #         # Process images with progress bar
-    #         for image_file in tqdm(image_files, desc="Processing images"):
-    #             image_path = os.path.join(folder_path, image_file)
-    #             self.process_single_image(image_path, session)
-                
-    #     except Exception as e:
-    #         logging.error(f"Error processing folder: {str(e)}")
-    #         raise
-            
-    #     finally:
-    #         # Clean up
-    #         self.utils.end_session(session)
-    
 def get_user_input():
     """Get interactive user input for processing parameters"""
     try:

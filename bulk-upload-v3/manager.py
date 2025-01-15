@@ -329,6 +329,10 @@ class CharacterManager(BaseManager):
             'Shimizu': BaseItem('Shimizu', ['shimizu,']),
             # 단비
             'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,']),
+            # 드와이트
+            'Dwight': BaseItem('Dwight', ['dwigh,', ]),
+            # Ohm
+            'Ohm': BaseItem('Ohm', ['ohm,', ]),
         }
 
 class OutfitManager(BaseManager):
