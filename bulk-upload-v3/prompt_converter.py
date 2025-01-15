@@ -129,8 +129,9 @@ class TagExtensions:
                 print(f"Multiple 태그 추가 중 오류 발생: {str(e)}")
                 self.session.rollback()
 
-    def check_4ground9_tag(self, prompt_text: str, resource) -> None:
-        """캐릭터 관련 태그가 없고 4GROUND9 태그가 있으면 삭제합니다."""
+    def check_manage_4ground9_tag(self, prompt_text: str, resource) -> None:
+        """캐릭터 관련 태그 유무에 따라 4GROUND9 태그를 관리합니다.
+        캐릭터 태그가 있으면 4GROUND9를 추가하고, 없으면 삭제합니다."""
         try:
             prompt_text = prompt_text.lower()
             has_character = False
@@ -146,9 +147,17 @@ class TagExtensions:
                 if has_character:
                     break
 
-            if not has_character:
-                # 4GROUND9 태그 찾기 및 삭제
-                ground9_tag = self.session.query(ColorCodeTags).filter_by(tag='4GROUND9').first()
+            # 4GROUND9 태그 찾기
+            ground9_tag = self.session.query(ColorCodeTags).filter_by(tag='4GROUND9').first()
+            
+            if has_character:
+                # 캐릭터가 있을 경우 태그 추가
+                if ground9_tag and ground9_tag not in resource.tags:
+                    print(f"캐릭터 관련 내용 있음 - 4GROUND9 태그 추가")
+                    resource.tags.append(ground9_tag)
+                    self.session.commit()
+            else:
+                # 캐릭터가 없을 경우 태그 삭제
                 if ground9_tag and ground9_tag in resource.tags:
                     print(f"캐릭터 관련 내용 없음 - 4GROUND9 태그 삭제")
                     resource.tags.remove(ground9_tag)
@@ -158,7 +167,6 @@ class TagExtensions:
             print(f"4GROUND9 태그 처리 중 오류 발생: {str(e)}")
             self.session.rollback()
 
-    # === TagExtensions의 check_lora_tag 메소드 수정 === #
     def check_lora_tag(self, prompt_text: str, resource, added_tag_ids: set) -> None:
         if not prompt_text:
             return
@@ -245,7 +253,7 @@ class Converter:
                 tag_extensions.check_multiple_characters(prompt_text, resource, added_tag_ids)
             
             if self.extension_options['check_4ground9']:
-                tag_extensions.check_4ground9_tag(prompt_text, resource)
+                tag_extensions.check_manage_4ground9_tag(prompt_text, resource)
             
             if self.extension_options['convert_tags']:
                 tag_extensions.convert_tags(
