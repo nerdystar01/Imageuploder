@@ -30,8 +30,8 @@ from models import ColorCodeTags
 from tag_mappings import CharacterManager
 
 class TagExtensions:
-    def __init__(self, session, character_manager):
-        self.session = session
+    def __init__(self, session: Session, character_manager):
+        self.session = session  # session을 thread-local session으로 업데이트 필요
         self.character_manager = character_manager
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>' # 로라 정규식
 
