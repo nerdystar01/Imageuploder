@@ -135,36 +135,30 @@ class Utills:
 
     def end_session(self, session):
         try:
-            # 열려있는 모든 트랜잭션을 롤백
-            try:
-                session.rollback()
-            except:
-                pass
-            
-            # 세션 정리
-            try:
-                session.remove()
-            except:
-                pass
-            
-            # 세션 종료
-            try:
-                session.close()
-            except:
-                pass
+            # 먼저 SSH 터널을 종료하기 전에 모든 데이터베이스 작업을 완료
+            if session:
+                try:
+                    session.close()
+                except:
+                    pass
                 
-            # SSH 터널 종료
-            try:
-                if self.server:
+                try:
+                    session.remove()
+                except:
+                    pass
+                
+            # 마지막으로 SSH 터널 종료
+            if self.server:
+                try:
                     self.server.stop()
                     logging.info("SSH tunnel closed")
-            except:
-                pass
-                
+                except:
+                    pass
+                    
         except Exception as e:
-            # 종료 과정에서 발생하는 에러는 무시
+            logging.warning(f"Session cleanup warning: {str(e)}")
             pass
-
+        
     @classmethod
     def upload_image_to_gcp_bucket(cls, blob_name, data, bucket_name):
         current_script_path = os.path.abspath(__file__)
