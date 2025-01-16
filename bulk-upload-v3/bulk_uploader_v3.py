@@ -133,9 +133,37 @@ class Utills:
                     logging.error(f"Failed to establish database connection after {retries} attempts")
                     raise
 
-    def end_session(self,session):
-        session.close()
-        self.stop_ssh_tunnel()
+    def end_session(self, session):
+        try:
+            # 열려있는 모든 트랜잭션을 롤백
+            try:
+                session.rollback()
+            except:
+                pass
+            
+            # 세션 정리
+            try:
+                session.remove()
+            except:
+                pass
+            
+            # 세션 종료
+            try:
+                session.close()
+            except:
+                pass
+                
+            # SSH 터널 종료
+            try:
+                if self.server:
+                    self.server.stop()
+                    logging.info("SSH tunnel closed")
+            except:
+                pass
+                
+        except Exception as e:
+            # 종료 과정에서 발생하는 에러는 무시
+            pass
 
     @classmethod
     def upload_image_to_gcp_bucket(cls, blob_name, data, bucket_name):
