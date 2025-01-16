@@ -459,4 +459,6 @@ class EventManager(BaseManager):
             'valentine': BaseItem('valentine', ['valentine,']),
             'winter-festival': BaseItem('winter-festival', ['winter-festival,']),
             'winter-clothes': BaseItem('winter-clothes', ['winter-clothes,', 'winter clothes,']),
+            'volunteer-work': BaseItem('volunteer-work', ['volunteer-work,', 'volunteer work,']),
+            'crime-scene': BaseItem('crime-scenes', ['crime-scene,', 'crime scene,']),
         }
