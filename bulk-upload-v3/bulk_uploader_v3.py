@@ -684,7 +684,6 @@ class ImageProcessingSystem:
             raise
 
     def process_folder(self, folder_path: str) -> None:
-        """Process images in parallel, each worker handling its own image"""
         if not os.path.exists(folder_path):
             raise ValueError(f"Folder path does not exist: {folder_path}")
         
@@ -700,7 +699,7 @@ class ImageProcessingSystem:
         processed_count = 0
         total_images = len(image_files)
         results = []
-        failed_images = []  # 실패한 이미지 파일 목록
+        failed_images = []  # 실패한 이미지 목록
         
         try:
             folder_name = os.path.basename(folder_path)
@@ -723,49 +722,39 @@ class ImageProcessingSystem:
                     img = futures[future]
                     try:
                         result = future.result()
-                        processed_count += 1
-                        pbar.update(1)
-                        
                         if result:
                             results.append(result)
-                            if processed_count == 1:  # 첫 번째 결과
+                            if not first_id:  # 첫 번째 성공한 결과
                                 first_id = result.id
-                            if processed_count == total_images:  # 마지막 결과
-                                last_id = result.id
+                            last_id = result.id  # 마지막으로 성공한 결과
+                        processed_count += 1
                     except Exception as e:
-                        print(f"Error processing {img}: {e}")
-                        failed_images.append(img)  # 실패한 이미지 추가
-                        # session.rollback()
-                        pbar.update(1)  # 실패해도 진행바 업데이트
-                        
+                        failed_images.append(img)
+                        print(f"\nError processing file: {img}")
+                        print(f"Error details: {str(e)}")
+                    finally:
+                        pbar.update(1)
+                
                 pbar.close()
             
-            # 대기 중인 작업이 있는지 확인
-            if processed_count < total_images:
-                print("\n처리되지 않은 이미지가 있습니다. 작업이 완료될 때까지 기다립니다...")
-                while processed_count < total_images:
-                    print(f"\r작업 대기 중... (처리된 이미지: {processed_count}/{total_images})", end="")
-                    time.sleep(1)
+            # 처리 결과 출력
+            print("\n=== 처리 결과 ===")
+            print(f"총 처리 시도: {total_images}개")
+            print(f"성공: {len(results)}개")
+            print(f"실패: {len(failed_images)}개")
+            if first_id and last_id:
+                print(f"성공한 리소스 ID 범위: {first_id} ~ {last_id}")
             
-            print("\n모든 작업이 완료되었습니다.")
-            session.commit()
-            
-            # 결과 출력
-            print(f"Processing completed - First ID: {first_id}, Last ID: {last_id}")
-            print(f"Successfully processed {len(results)} out of {total_images} images")
-            
-            # 실패한 이미지 리포트
+            # 실패한 파일 목록 출력
             if failed_images:
-                print("\n=== 처리 실패한 이미지 목록 ===")
+                print("\n=== 실패한 파일 목록 ===")
                 for i, failed_img in enumerate(failed_images, 1):
                     print(f"{i}. {failed_img}")
-                print(f"\n총 {len(failed_images)}개의 이미지 처리 실패")
-            else:
-                print("\n모든 이미지가 성공적으로 처리되었습니다.")
+            
+            session.commit()
             
         except Exception as e:
-            logging.error(f"Error processing folder: {str(e)}")
-            raise
+            logging.error(f"Folder processing error: {str(e)}")
         finally:
             session.remove()
 
