@@ -333,6 +333,12 @@ class CharacterManager(BaseManager):
             'Dwight': BaseItem('Dwight', ['dwight,', ]),
             # Ohm
             'Ohm': BaseItem('Ohm', ['ohm,', ]),
+            # Spitz
+            'Spitz': BaseItem('Spitz', ['spitz,', 'nsspitz,']),
+            # Campo
+            'Campo': BaseItem('Campo', ['campo,', 'nscampo,']),
+            # Vulkan
+            'Vulkan': BaseItem('Vulkan', ['vulkan,', 'nsvulkan,']),
         }
 
 class OutfitManager(BaseManager):
@@ -453,7 +459,7 @@ class EventManager(BaseManager):
             'christmas': BaseItem('christmas', ['christmas,']),
             'flower': BaseItem('flower', ['flower,']),
             'halloween': BaseItem('halloween', ['halloween,']),
-            'new-year': BaseItem('new-year', ['new-year,']),
+            'new-year': BaseItem('new-year', ['new-year,', 'new year,']),
             'swimming': BaseItem('swimming', ['swimming,']),
             'thanksgiving-day': BaseItem('thanksgiving-day', ['thanksgiving-day,']),
             'valentine': BaseItem('valentine', ['valentine,']),
