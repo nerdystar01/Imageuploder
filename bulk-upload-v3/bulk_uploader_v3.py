@@ -6,7 +6,9 @@ import logging
 import re
 from typing import Tuple, Dict, Any, List
 import time
-
+import functools
+from ssl import SSLError
+import psycopg2
 
 
 # Third Party Libraries
@@ -34,6 +36,23 @@ from manager import CharacterManager, OutfitManager, EventManager
 
 
 
+def retry_on_connection_error(max_retries=3):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(self, *args, **kwargs)
+                except (psycopg2.OperationalError, SSLError) as e:
+                    if attempt < max_retries - 1:
+                        logging.warning(f"Connection error: {str(e)}. Retrying... ({attempt + 1}/{max_retries})")
+                        self.check_connection()  # 연결 상태 확인 및 재연결
+                        time.sleep(5)
+                    else:
+                        logging.error(f"Connection failed after {max_retries} attempts")
+                        raise
+        return wrapper
+    return decorator
 # ------------------------------
 #  SSH Connection    
 # ------------------------------
@@ -41,21 +60,27 @@ class Utills:
     def __init__(self):
         self.server = None
 
-    def start_ssh_tunnel(self):
-        try:
-            self.server = SSHTunnelForwarder(
-                ('34.64.105.81', 22),
-                ssh_username='nerdystar',
-                ssh_pkey='./wcidfu-ssh',
-                remote_bind_address=('10.1.31.44', 5432),
-                set_keepalive=60
-            )
-            self.server.start()
-            logging.info("SSH tunnel established")
-            return self.server
-        except Exception as e:
-            logging.error(f"Error establishing SSH tunnel: {str(e)}")
-            raise
+
+    def start_ssh_tunnel(self, max_retries=3, retry_delay=5):
+        for attempt in range(max_retries):
+            try:
+                self.server = SSHTunnelForwarder(
+                    ('34.64.105.81', 22),
+                    ssh_username='nerdystar',
+                    ssh_pkey='./wcidfu-ssh',
+                    remote_bind_address=('10.1.31.44', 5432),
+                    set_keepalive=60
+                )
+                self.server.start()
+                logging.info("SSH tunnel established")
+                return self.server
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logging.warning(f"SSH tunnel attempt {attempt + 1} failed: {str(e)}. Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    logging.error(f"Failed to establish SSH tunnel after {max_retries} attempts: {str(e)}")
+                    raise
 
     def check_connection(self):
         if self.server is None or not self.server.is_active:
@@ -85,11 +110,27 @@ class Utills:
         return clean_blob_name
     
     def get_session(self):
-        server = self.start_ssh_tunnel()
-        engine = setup_database_engine("nerdy@2024", server.local_bind_port)
-        session_factory = sessionmaker(bind=engine)
-        session = scoped_session(session_factory)
-        return session, server
+        retries = 3
+        for attempt in range(retries):
+            try:
+                server = self.start_ssh_tunnel()
+                engine = setup_database_engine("nerdy@2024", server.local_bind_port)
+                session_factory = sessionmaker(bind=engine)
+                session = scoped_session(session_factory)
+                
+                # Test connection
+                session().execute("SELECT 1")
+                
+                return session, server
+            except Exception as e:
+                if attempt < retries - 1:
+                    logging.warning(f"Database connection attempt {attempt + 1} failed. Retrying...")
+                    time.sleep(5)
+                    if self.server:
+                        self.stop_ssh_tunnel()
+                else:
+                    logging.error(f"Failed to establish database connection after {retries} attempts")
+                    raise
 
     def end_session(self,session):
         session.close()
@@ -252,7 +293,8 @@ class PromptParser:
         """
         matches = re.findall(self.lora_regex, prompt_text)
         return [(model, float(weight)) for model, weight in matches]
-
+    
+    @retry_on_connection_error()
     def _process_single_resource(self, session: Session, resource: Resource, prompt_text: str) -> int:
         """
         단일 리소스의 프롬프트를 처리하고 태그를 추가합니다.
