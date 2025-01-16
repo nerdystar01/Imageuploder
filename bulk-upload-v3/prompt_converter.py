@@ -224,6 +224,8 @@ class Converter:
             'from_tag_id': None,
             'to_tag_id': None
         }
+        self.max_retries = 3
+        self.retry_delay = 5  # seconds
 
     def _process_single_resource(self, session: Session, resource: Resource, prompt_text: str) -> int:
         print(f"\n리소스 ID {resource.id} 처리 시작")
@@ -281,7 +283,9 @@ class Converter:
                 ssh_username='nerdystar',
                 ssh_pkey='./wcidfu-ssh',
                 remote_bind_address=('10.1.31.44', 5432),
-                set_keepalive=60
+                set_keepalive=60,
+                keepalive_interval=30,  # 30초마다 키프얼라이브 패킷 전송
+                compression=True
             )
             self.server.start()
             logging.info("SSH tunnel established")
@@ -289,7 +293,7 @@ class Converter:
         except Exception as e:
             logging.error(f"Error establishing SSH tunnel: {str(e)}")
             raise
-            
+
     def stop_ssh_tunnel(self):
         if self.server:
             self.server.stop()
@@ -297,10 +301,18 @@ class Converter:
 
     def get_session(self):
         server = self.start_ssh_tunnel()
-        engine = setup_database_engine("nerdy@2024", server.local_bind_port)
+        engine = setup_database_engine(
+            "nerdy@2024", 
+            server.local_bind_port,
+            pool_size=20,  # 연결 풀 크기 설정
+            max_overflow=10,  # 추가 연결 허용 개수
+            pool_timeout=30,  # 풀에서 연결을 기다리는 최대 시간
+            pool_recycle=1800  # 30분마다 연결 재활용
+        )
         session_factory = sessionmaker(bind=engine)
         session = scoped_session(session_factory)
         return session, server
+
         
     def _get_or_create_tag(self, session: Session, tag_name: str) -> ColorCodeTags:
         """주어진 태그 이름으로 태그를 조회하거나 없으면 새로 생성합니다."""

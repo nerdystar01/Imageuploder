@@ -628,7 +628,8 @@ class ImageProcessingSystem:
         last_id = None
         processed_count = 0
         total_images = len(image_files)
-        results = []  # Store all results
+        results = []
+        failed_images = []  # 실패한 이미지 파일 목록
         
         try:
             folder_name = os.path.basename(folder_path)
@@ -642,10 +643,11 @@ class ImageProcessingSystem:
                     ): img for img in image_files
                 }
                 
-                # Progress bar
-                pbar = tqdm(total=total_images, desc=f"Processing images in {folder_name}")
+                pbar = tqdm(
+                    total=len(futures),
+                    desc=f"Processing images in {folder_name}"
+                )
                 
-                # Process all futures
                 for future in as_completed(futures):
                     img = futures[future]
                     try:
@@ -655,40 +657,40 @@ class ImageProcessingSystem:
                         
                         if result:
                             results.append(result)
-                            if processed_count == 1:  # First result
+                            if processed_count == 1:  # 첫 번째 결과
                                 first_id = result.id
-                            if processed_count == total_images:  # Last result
+                            if processed_count == total_images:  # 마지막 결과
                                 last_id = result.id
                     except Exception as e:
-                        logging.error(f"Error processing {img}: {e}")
-                        session.rollback()  # Rollback on error
-                
+                        print(f"Error processing {img}: {e}")
+                        failed_images.append(img)  # 실패한 이미지 추가
+                        # session.rollback()
+                        pbar.update(1)  # 실패해도 진행바 업데이트
+                        
                 pbar.close()
-                
-                # Wait until all images are processed
-                waiting_start_time = time.time()
+            
+            # 대기 중인 작업이 있는지 확인
+            if processed_count < total_images:
+                print("\n처리되지 않은 이미지가 있습니다. 작업이 완료될 때까지 기다립니다...")
                 while processed_count < total_images:
                     print(f"\r작업 대기 중... (처리된 이미지: {processed_count}/{total_images})", end="")
-                    time.sleep(1)  # 1초 딜레이
-                    
-                    # 5분(300초) 이상 대기했다면 경고 메시지 출력
-                    if time.time() - waiting_start_time > 300:
-                        print("\n경고: 작업이 5분 이상 지연되고 있습니다.")
-                        waiting_start_time = time.time()  # 타이머 리셋
-                
-                print("\n모든 이미지 처리가 완료되었습니다.")
-                
-                # Final commit after all processing is complete
-                try:
-                    session.commit()
-                    print("데이터베이스 커밋이 완료되었습니다.")
-                except Exception as e:
-                    logging.error(f"Error during final commit: {e}")
-                    session.rollback()
-                    raise
+                    time.sleep(1)
             
-            logging.info(f"Processing completed - First ID: {first_id}, Last ID: {last_id}, Total Images: {total_images}")
-            logging.info(f"Successfully processed {len(results)} out of {total_images} images")
+            print("\n모든 작업이 완료되었습니다.")
+            session.commit()
+            
+            # 결과 출력
+            print(f"Processing completed - First ID: {first_id}, Last ID: {last_id}")
+            print(f"Successfully processed {len(results)} out of {total_images} images")
+            
+            # 실패한 이미지 리포트
+            if failed_images:
+                print("\n=== 처리 실패한 이미지 목록 ===")
+                for i, failed_img in enumerate(failed_images, 1):
+                    print(f"{i}. {failed_img}")
+                print(f"\n총 {len(failed_images)}개의 이미지 처리 실패")
+            else:
+                print("\n모든 이미지가 성공적으로 처리되었습니다.")
             
         except Exception as e:
             logging.error(f"Error processing folder: {str(e)}")
