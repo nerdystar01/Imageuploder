@@ -118,8 +118,9 @@ class Utills:
                 session_factory = sessionmaker(bind=engine)
                 session = scoped_session(session_factory)
                 
-                # Test connection
-                session().execute("SELECT 1")
+                # Test connection - SQLAlchemy 2.0 스타일로 수정
+                from sqlalchemy import text
+                session().execute(text("SELECT 1"))
                 
                 return session, server
             except Exception as e:
