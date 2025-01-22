@@ -129,14 +129,14 @@ class Resource(Base):
       CheckConstraint('seed >= -1 AND seed <= 10000000000', name='seed_range'),
       
       # Indexes
-      Index('idx_res_created_desc', created_at.desc()),
-      Index('idx_res_created_asc', created_at),
-      Index('idx_res_updated_desc', updated_at.desc()),
-      Index('idx_res_updated_asc', updated_at),
-      Index('idx_res_royalty_updated', royalty.desc(), updated_at.desc(), id.desc()),
-      Index('idx_res_rating', star_rating.desc(), id.desc()),
-      Index('idx_res_royalty_updated_asc', royalty.desc(), updated_at, id.desc()),
-      Index('idx_res_royalty', royalty.desc(), id.desc()),
+      # Index('idx_res_created_desc', created_at.desc()),
+      # Index('idx_res_created_asc', created_at),
+      # Index('idx_res_updated_desc', updated_at.desc()),
+      # Index('idx_res_updated_asc', updated_at),
+      # Index('idx_res_royalty_updated', royalty.desc(), updated_at.desc(), id.desc()),
+      # Index('idx_res_rating', star_rating.desc(), id.desc()),
+      # Index('idx_res_royalty_updated_asc', royalty.desc(), updated_at, id.desc()),
+      # Index('idx_res_royalty', royalty.desc(), id.desc()),
    )
    
    # High Res Settings
