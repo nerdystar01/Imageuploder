@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 
 
 # SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
@@ -42,6 +42,22 @@ resource_hidden_users = Table(
 
 resource_tabbed_users = Table(
    'resource_tabbed_users',
+   Base.metadata,
+   Column('resource_id', Integer, ForeignKey('resource.id')),
+   Column('user_id', Integer, ForeignKey('user.id'))
+)
+
+resource_placeholder = Table(
+   'resource_placeholder', 
+   Base.metadata,
+   Column('resource_id', Integer, ForeignKey('resource.id')),
+   Column('user_id', Integer, ForeignKey('user.id')),
+   # Add unique constraint if needed
+   UniqueConstraint('resource_id', 'user_id', name='unique_resource_placeholder')
+)
+
+resource_view_status = Table(
+   'resource_view_status',
    Base.metadata,
    Column('resource_id', Integer, ForeignKey('resource.id')),
    Column('user_id', Integer, ForeignKey('user.id'))
@@ -143,6 +159,11 @@ class Resource(Base):
    royalty = Column(Float, default=0.0)
    gpt_vision_score = Column(Integer, nullable=True)
 
+   #
+   slack_timestamp = Column(Text, default="")
+    
+   
+
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
@@ -158,6 +179,9 @@ class Resource(Base):
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
    user = relationship("User", foreign_keys=[user_id])
+   #Add new relationships
+   placeholder = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
+   view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
 
 class ColorCodeTags(Base):
    __tablename__ = 'color_code_tags'
