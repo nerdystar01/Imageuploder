@@ -52,7 +52,6 @@ resource_placeholder = Table(
    Base.metadata,
    Column('resource_id', Integer, ForeignKey('resource.id')),
    Column('user_id', Integer, ForeignKey('user.id')),
-   # Add unique constraint if needed
    UniqueConstraint('resource_id', 'user_id', name='unique_resource_placeholder')
 )
 
@@ -180,7 +179,7 @@ class Resource(Base):
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
    user = relationship("User", foreign_keys=[user_id])
    #Add new relationships
-   placeholder = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
+   placeholder_resources = relationship("Resource", secondary=resource_placeholder, back_populates="placeholder_users")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
 
 class ColorCodeTags(Base):
