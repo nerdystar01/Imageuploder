@@ -179,7 +179,7 @@ class Resource(Base):
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
    user = relationship("User", foreign_keys=[user_id])
    #Add new relationships
-   placeholder_resources = relationship("Resource", secondary=resource_placeholder, back_populates="placeholder_users")
+   placeholder_users = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
 
 class ColorCodeTags(Base):
