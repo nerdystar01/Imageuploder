@@ -1,21 +1,27 @@
-# Standard Library
 from datetime import datetime
 import uuid
-from typing import List
-from urllib.parse import quote_plus
-
-
-# SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint
+from sqlalchemy import (
+    create_engine, 
+    Column, 
+    Integer, 
+    String, 
+    Float, 
+    Boolean, 
+    ForeignKey, 
+    DateTime, 
+    Text, 
+    Table,
+    UniqueConstraint,
+    Index,
+    CheckConstraint
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 import pytz
 
-# 서울 timezone 설정
 seoul_tz = pytz.timezone('Asia/Seoul')
 Base = declarative_base()
-
 
 # Association Tables
 resource_likes = Table(
@@ -114,6 +120,23 @@ class Resource(Base):
    clip_skip = Column(Integer, nullable=True)
    
    # Validators as CheckConstraints
+   __table_args__ = (
+      CheckConstraint('width >= 64 AND width <= 2048', name='width_range'),
+      CheckConstraint('height >= 64 AND height <= 2048', name='height_range'),
+      CheckConstraint('steps >= 1 AND steps <= 40', name='steps_range'),
+      CheckConstraint('cfg_scale >= 1 AND cfg_scale <= 30', name='cfg_range'),
+      CheckConstraint('seed >= -1 AND seed <= 10000000000', name='seed_range'),
+      
+      # Indexes
+      # Index('idx_res_created_desc', created_at.desc()),
+      # Index('idx_res_created_asc', created_at),
+      # Index('idx_res_updated_desc', updated_at.desc()),
+      # Index('idx_res_updated_asc', updated_at),
+      # Index('idx_res_royalty_updated', royalty.desc(), updated_at.desc(), id.desc()),
+      # Index('idx_res_rating', star_rating.desc(), id.desc()),
+      # Index('idx_res_royalty_updated_asc', royalty.desc(), updated_at, id.desc()),
+      # Index('idx_res_royalty', royalty.desc(), id.desc()),
+   )
    
    # High Res Settings
    is_highres = Column(Boolean, default=False)
@@ -228,3 +251,12 @@ class User(Base):
    placeholder_resources = relationship("Resource", secondary="resource_placeholder", back_populates="placeholder")
    viewed_resources = relationship("Resource", secondary=resource_view_status, back_populates="view_status")
    color_code_tags = relationship("ColorCodeTags", back_populates="user")
+
+def setup_database_engine(password, port):
+   db_user = "wcidfu"
+   db_host = "127.0.0.1"
+   db_name = "wcidfu"
+   encoded_password = quote_plus(password)
+   engine = create_engine(f'postgresql+psycopg2://{db_user}:{encoded_password}@{db_host}:{port}/{db_name}')
+   Base.metadata.create_all(engine)
+   return engine
