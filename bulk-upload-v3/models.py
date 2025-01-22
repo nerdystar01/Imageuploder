@@ -79,6 +79,8 @@ class User(Base):
    hidden_resources = relationship("Resource", secondary=resource_hidden_users, back_populates="hidden_by")
    tabbed_resources = relationship("Resource", secondary=resource_tabbed_users, back_populates="tabbed_by")
    color_code_tags = relationship("ColorCodeTags", back_populates="user")
+   placeholder_resources = relationship("Resource", secondary=resource_placeholder, back_populates="placeholder_users")
+   viewed_resources = relationship("Resource", secondary=resource_view_status, back_populates="view_status")
 
 class ResourceTagV2(Base):
    __tablename__ = 'resource_tag_v2'
