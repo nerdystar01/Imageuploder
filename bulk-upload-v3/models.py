@@ -170,7 +170,7 @@ class Resource(Base):
    #
    binary_number_pattern = Column(Text, default="")
    # Bitcoin
-   block_hash = Column(Text, default="")
+   block_hash = Column(Text, nullable=True)
     
    
 
