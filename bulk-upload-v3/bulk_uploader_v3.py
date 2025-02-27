@@ -23,6 +23,7 @@ from google.oauth2 import service_account
 
 # Database
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy import func
 
 # Local Imports
 from models import (
@@ -768,6 +769,15 @@ def get_user_input():
             if os.path.exists(folder_path):
                 break
             print("존재하지 않는 경로입니다. 다시 입력해주세요.")
+        
+        # 폴더가 캐릭터 폴더인지 확인
+        is_character_folder = False
+        while True:
+            character_folder = input("이 폴더는 캐릭터 폴더입니까? (y/n): ").strip().lower()
+            if character_folder in ['y', 'n']:
+                is_character_folder = (character_folder == 'y')
+                break
+            print("'y' 또는 'n'을 입력해주세요.")
 
         # Get default tag IDs
         default_tag_ids = []
@@ -787,7 +797,7 @@ def get_user_input():
                 break
             print("'y' 또는 'n'을 입력해주세요.")
 
-        return user_id, folder_path, default_tag_ids
+        return user_id, folder_path, default_tag_ids, is_character_folder
 
     except KeyboardInterrupt:
         print("\n프로그램을 종료합니다.")
@@ -871,6 +881,114 @@ def save_tag_mapping(tag_mapping: Dict[str, str]):
             
         f.write("}\n")
 
+def get_or_create_character_tag(session, folder_name, user_id):
+    """
+    폴더 이름으로 태그를 검색하고 없으면 생성합니다.
+    
+    Args:
+        session: 데이터베이스 세션
+        folder_name: 검색할 폴더 이름
+        user_id: 사용자 ID
+        
+    Returns:
+        ColorCodeTags: 찾거나 생성한 태그 객체의 ID
+    """
+    try:
+        # 소문자로 변환하여 검색
+        search_name = folder_name.lower()
+        tag = session.query(ColorCodeTags).filter(
+            func.lower(ColorCodeTags.tag) == search_name,
+            ColorCodeTags.type == 'normal'
+        ).first()
+        
+        if tag:
+            print(f"기존 태그를 찾았습니다: {tag.tag} (ID: {tag.id})")
+            return tag.id
+        else:
+            # 태그가 없으면 새로 생성
+            new_tag = ColorCodeTags(
+                tag=folder_name,  # 원래 대소문자 유지
+                color_code='#FFFFFF',
+                type='normal',
+                user_id=user_id
+            )
+            session.add(new_tag)
+            session.flush()  # ID를 얻기 위해 flush
+            print(f"새로운 캐릭터 태그를 생성했습니다: {new_tag.tag} (ID: {new_tag.id})")
+            return new_tag.id
+            
+    except Exception as e:
+        session.rollback()
+        logging.error(f"캐릭터 태그 생성/조회 중 오류 발생: {str(e)}")
+        print(f"오류: {str(e)}")
+        return None
+
+# def main():
+#     # Configure logging
+#     logging.basicConfig(
+#         level=logging.INFO,
+#         format='%(asctime)s - %(levelname)s - %(message)s'
+#     )
+    
+#     try:
+#         # Utils 인스턴스 생성
+#         utils = Utills()
+        
+#         tag_mapping = create_tag_mapping()
+        
+#         # 매핑 결과 출력
+#         print(f"총 {len(tag_mapping)}개의 태그 매핑이 생성되었습니다.")
+        
+#         # 파일로 저장
+#         save_tag_mapping(tag_mapping)
+
+#         # Get user input
+#         user_id, folder_path, default_tag_ids = get_user_input()
+        
+#         # 데이터베이스 연결
+#         session, server = utils.get_session()
+        
+#         try:
+#             # 입력값 검증
+#             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
+#             if not is_valid:
+#                 print(f"\n오류: {error_message}")
+#                 return
+                
+#             # Initialize processor
+#             processor = ImageProcessingSystem(
+#                 user_id=user_id,
+#                 default_tag_ids=default_tag_ids
+#             )
+            
+#             # Show processing information
+#             print("\n처리 정보:")
+#             print(f"사용자 ID: {user_id}")
+#             print(f"폴더 경로: {folder_path}")
+#             print(f"적용될 태그 ID: {default_tag_ids}")
+            
+#             # Confirm processing
+#             confirm = input("\n처리를 시작하시겠습니까? (y/n): ").strip().lower()
+#             if confirm != 'y':
+#                 print("프로그램을 종료합니다.")
+#                 return
+            
+#             # Process the folder
+#             processor.process_folder(folder_path)
+#             print("이미지 처리가 완료되었습니다.")
+            
+#         finally:
+#             utils.end_session(session)
+            
+#     except Exception as e:
+#         logging.error(f"처리 중 오류가 발생했습니다: {str(e)}")
+#         print("오류가 발생했습니다. 로그를 확인해주세요.")
+#     except KeyboardInterrupt:
+#         print("\n프로그램이 중단되었습니다.")
+#     finally:
+#         utils.stop_ssh_tunnel()
+# if __name__ == "__main__":
+#     main()
 def main():
     # Configure logging
     logging.basicConfig(
@@ -890,13 +1008,35 @@ def main():
         # 파일로 저장
         save_tag_mapping(tag_mapping)
 
-        # Get user input
-        user_id, folder_path, default_tag_ids = get_user_input()
+        # Get user input with character folder check
+        user_id, folder_path, default_tag_ids, is_character_folder = get_user_input()
         
         # 데이터베이스 연결
         session, server = utils.get_session()
         
         try:
+            # sqlalchemy func 가져오기
+            from sqlalchemy import func
+            
+            # 캐릭터 폴더 처리
+            if is_character_folder:
+                folder_name = os.path.basename(folder_path)
+                print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
+                
+                # 폴더 이름으로 태그 찾기 또는 생성
+                character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
+                
+                if character_tag_id:
+                    # 캐릭터 태그를 디폴트 태그 목록에 추가
+                    if character_tag_id not in default_tag_ids:
+                        default_tag_ids.append(character_tag_id)
+                        print(f"캐릭터 태그(ID: {character_tag_id})를 디폴트 태그 목록에 추가했습니다.")
+                    else:
+                        print(f"캐릭터 태그(ID: {character_tag_id})는 이미 디폴트 태그 목록에 있습니다.")
+                
+                # 변경 사항 확정
+                session.commit()
+            
             # 입력값 검증
             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
             if not is_valid:
@@ -913,6 +1053,7 @@ def main():
             print("\n처리 정보:")
             print(f"사용자 ID: {user_id}")
             print(f"폴더 경로: {folder_path}")
+            print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
             print(f"적용될 태그 ID: {default_tag_ids}")
             
             # Confirm processing
@@ -935,5 +1076,3 @@ def main():
         print("\n프로그램이 중단되었습니다.")
     finally:
         utils.stop_ssh_tunnel()
-if __name__ == "__main__":
-    main()
