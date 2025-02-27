@@ -737,7 +737,7 @@ class ImageProcessingSystem:
             logging.error(f"Folder processing error: {str(e)}")
         finally:
             session.remove()
-    
+
 def get_user_input():
     """Get interactive user input for processing parameters"""
     try:
@@ -877,7 +877,7 @@ def save_tag_mapping(tag_mapping: Dict[str, str]):
             
         f.write("}\n")
 
-def get_or_create_character_tag(session, folder_name, user_id):
+def get_or_create_character_tag(session, folder_name, user_id, created_tags_dict=None):
     """
     폴더 이름으로 태그를 검색하고 없으면 생성합니다.
     
@@ -885,39 +885,60 @@ def get_or_create_character_tag(session, folder_name, user_id):
         session: 데이터베이스 세션
         folder_name: 검색할 폴더 이름
         user_id: 사용자 ID
+        created_tags_dict: 새로 생성된 태그를 저장할 딕셔너리 (선택 사항)
         
     Returns:
-        ColorCodeTags: 찾거나 생성한 태그 객체의 ID
+        list: 찾거나 생성한 태그 ID 목록
     """
     try:
         # 소문자로 변환하여 검색
-        search_name = folder_name.lower()
-        tag = session.query(ColorCodeTags).filter(
-            func.lower(ColorCodeTags.tag) == search_name,
-            ColorCodeTags.type == 'normal'
-        ).first()
+        from sqlalchemy import func
         
-        if tag:
-            print(f"기존 태그를 찾았습니다: {tag.tag} (ID: {tag.id})")
-            return tag.id
-        else:
-            # 태그가 없으면 새로 생성
-            new_tag = ColorCodeTags(
-                tag=folder_name,  # 원래 대소문자 유지
-                color_code='#FFFFFF',
-                type='normal',
-                user_id=user_id
-            )
-            session.add(new_tag)
-            session.flush()  # ID를 얻기 위해 flush
-            print(f"새로운 캐릭터 태그를 생성했습니다: {new_tag.tag} (ID: {new_tag.id})")
-            return new_tag.id
+        # 폴더 이름을 '_'로 분리하여 각 부분을 개별 태그로 처리
+        tag_names = folder_name.split('_')
+        if len(tag_names) > 5:  # 최대 5개까지만 처리
+            print(f"경고: 폴더 이름에 '_'로 구분된 부분이 5개를 초과합니다. 처음 5개만 처리합니다.")
+            tag_names = tag_names[:5]
+            
+        tag_ids = []
+        
+        for tag_name in tag_names:
+            if not tag_name:  # 빈 문자열 건너뛰기
+                continue
+                
+            search_name = tag_name.lower()
+            tag = session.query(ColorCodeTags).filter(
+                func.lower(ColorCodeTags.tag) == search_name,
+                ColorCodeTags.type == 'normal'
+            ).first()
+            
+            if tag:
+                print(f"기존 태그를 찾았습니다: {tag.tag} (ID: {tag.id})")
+                tag_ids.append(tag.id)
+            else:
+                # 태그가 없으면 새로 생성
+                new_tag = ColorCodeTags(
+                    tag=tag_name,  # 원래 대소문자 유지
+                    color_code='#FFFFFF',
+                    type='normal',
+                    user_id=user_id
+                )
+                session.add(new_tag)
+                session.flush()  # ID를 얻기 위해 flush
+                print(f"새로운 태그를 생성했습니다: {new_tag.tag} (ID: {new_tag.id})")
+                tag_ids.append(new_tag.id)
+                
+                # 생성된 태그 정보를 딕셔너리에 추가
+                if created_tags_dict is not None:
+                    created_tags_dict[new_tag.id] = new_tag.tag
+        
+        return tag_ids
             
     except Exception as e:
         session.rollback()
-        logging.error(f"캐릭터 태그 생성/조회 중 오류 발생: {str(e)}")
+        logging.error(f"태그 생성/조회 중 오류 발생: {str(e)}")
         print(f"오류: {str(e)}")
-        return None
+        return []
 
 def get_subfolders(base_path):
     """
@@ -952,7 +973,7 @@ def get_subfolders(base_path):
     
     return subfolders
 
-def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder):
+def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder, created_tags_dict=None):
     """
     단일 폴더를 처리하는 함수
     
@@ -963,6 +984,7 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
         folder_path: 처리할 폴더 경로
         default_tag_ids: 기본 태그 ID 목록
         is_character_folder: 캐릭터 폴더 여부
+        created_tags_dict: 새로 생성된 태그를 저장할 딕셔너리 (선택 사항)
     """
     from sqlalchemy import func
     
@@ -974,16 +996,21 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
         folder_name = os.path.basename(folder_path)
         print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
         
-        # 폴더 이름으로 태그 찾기 또는 생성
-        character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
+        # 폴더 이름으로 태그 찾기 또는 생성 (이제 여러 태그 ID를 반환함)
+        character_tag_ids = get_or_create_character_tag(session, folder_name, user_id, created_tags_dict)
         
-        if character_tag_id:
-            # 캐릭터 태그를 현재 폴더의 태그 목록에만 추가
-            if character_tag_id not in folder_tag_ids:
-                folder_tag_ids.append(character_tag_id)
-                print(f"캐릭터 태그(ID: {character_tag_id})를 태그 목록에 추가했습니다.")
+        if character_tag_ids:
+            # 각 태그를 현재 폴더의 태그 목록에 추가
+            added_count = 0
+            for tag_id in character_tag_ids:
+                if tag_id not in folder_tag_ids:
+                    folder_tag_ids.append(tag_id)
+                    added_count += 1
+            
+            if added_count > 0:
+                print(f"{added_count}개의 태그를 태그 목록에 추가했습니다.")
             else:
-                print(f"캐릭터 태그(ID: {character_tag_id})는 이미 태그 목록에 있습니다.")
+                print("모든 태그가 이미 태그 목록에 존재합니다.")
         
         # 변경 사항 확정
         session.commit()
@@ -1032,6 +1059,9 @@ def main():
         try:
             # sqlalchemy func 가져오기
             from sqlalchemy import func
+            
+            # 새로 생성된 태그를 저장할 딕셔너리
+            created_tags = {}
             
             # 입력값 검증
             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
@@ -1084,10 +1114,21 @@ def main():
                     user_id=user_id,
                     folder_path=folder_path,
                     default_tag_ids=default_tag_ids,
-                    is_character_folder=is_character_folder
+                    is_character_folder=is_character_folder,
+                    created_tags_dict=created_tags
                 )
             
             print("\n모든 폴더 처리가 완료되었습니다.")
+            
+            # 새로 생성된 태그 정보 출력
+            if created_tags:
+                print("\n=== 이번 작업에서 새로 생성된 태그 ===")
+                print("ID\t| 태그명")
+                print("-"*50)
+                for tag_id, tag_name in created_tags.items():
+                    print(f"{tag_id}\t| {tag_name}")
+            else:
+                print("\n이번 작업에서 새로 생성된 태그가 없습니다.")
             
         finally:
             utils.end_session(session)

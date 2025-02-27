@@ -177,27 +177,41 @@ class TagExtensions:
                 
             print(f"\n로라 태그 추출 결과: {lora_matches}")
             
-            current_tags = {tag.tag for tag in resource.tags}
+            current_tags = {tag.tag.lower() for tag in resource.tags}
+            processed_models = set()  # 중복 처리 방지를 위한 세트
             
             for model_name, weight in lora_matches:
+                # 이미 처리한 모델은 건너뛰기
+                if model_name.lower() in processed_models:
+                    print(f"이미 처리된 로라 건너뛰기: {model_name}")
+                    continue
+                    
+                processed_models.add(model_name.lower())
+                
                 try:
-                    # 여기서 직접 session을 사용해야 함
-                    tag = self.session.query(ColorCodeTags).filter_by(tag=model_name).first()
+                    # 대소문자 구분 없이 검색
+                    from sqlalchemy import func
+                    tag = self.session.query(ColorCodeTags).filter(
+                        func.lower(ColorCodeTags.tag) == model_name.lower()
+                    ).first()
+                    
                     if tag is None:
                         tag = ColorCodeTags(
-                            tag=model_name,
+                            tag=model_name,  # 원래 형태 유지
                             color_code='#FFFFFF'
                         )
                         self.session.add(tag)
-                        self.session.commit()
-                        print(f"새로운 태그 생성됨: {model_name}")
+                        self.session.flush()
+                        print(f"새로운 로라 태그 생성됨: {model_name} (ID: {tag.id})")
+                    else:
+                        print(f"기존 로라 태그 찾음: {tag.tag} (ID: {tag.id})")
                     
                     if tag.id not in added_tag_ids:
-                        print(f"로라 태그 추가: {model_name} (ID: {tag.id})")
+                        print(f"로라 태그 추가: {tag.tag} (ID: {tag.id})")
                         resource.tags.append(tag)
                         added_tag_ids.add(tag.id)
                     else:
-                        print(f"로라 태그 중복 건너뛰기: {model_name}")
+                        print(f"로라 태그 중복 건너뛰기: {tag.tag}")
                             
                 except Exception as e:
                     print(f"태그 생성/조회 중 오류 발생: {str(e)}")
