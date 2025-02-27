@@ -73,6 +73,10 @@ class User(Base):
    folder_id = Column(Integer, nullable=True)
    json_file = Column(String, nullable=True)
    nano_id = Column(String(21), unique=True, nullable=True)
+   username_2 = Column(String(256), nullable=True)
+   nickname = Column(String(256), nullable=True)
+   google_email = Column(String, unique=True, nullable=False)
+   metamask_wallet_address = Column(String, unique=True, nullable=False)
 
    # Relationships
    liked_resources = relationship("Resource", secondary=resource_likes, back_populates="likes")
@@ -160,8 +164,13 @@ class Resource(Base):
    royalty = Column(Float, default=0.0)
    gpt_vision_score = Column(Integer, nullable=True)
 
-   #
+   # Slack
    slack_timestamp = Column(Text, default="")
+
+   #
+   binary_number_pattern = Column(Text, default="")
+   # Bitcoin
+   block_hash = Column(Text, default="")
     
    
 
@@ -192,7 +201,8 @@ class ColorCodeTags(Base):
    tag = Column(String(4000))
    type = Column(String(10), default='normal')
    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
-
+   binary_number_mask = Column(String(4000), default="")
+   
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))

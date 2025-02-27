@@ -60,7 +60,6 @@ class Utills:
     def __init__(self):
         self.server = None
 
-
     def start_ssh_tunnel(self, max_retries=3, retry_delay=5):
         for attempt in range(max_retries):
             try:
