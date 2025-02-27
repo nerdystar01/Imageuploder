@@ -613,20 +613,6 @@ class ImageProcessingSystem:
             session.rollback()
             raise
 
-    # def add_default_tags(self, resource: Resource, session: Session) -> None:
-    #     """Add default tags to a resource using tag IDs"""
-    #     try:
-    #         for tag_id in self.default_tag_ids:
-    #             tag = session.query(ColorCodeTags).filter_by(id=tag_id).first()
-    #             if tag:
-    #                 resource.tags.append(tag)
-    #             else:
-    #                 logging.warning(f"Tag ID {tag_id} not found in database")
-    #         session.commit()
-    #     except Exception as e:
-    #         logging.error(f"Error adding default tags: {str(e)}")
-    #         session.rollback()
-
     def add_default_tags(self, resource: Resource, session: Session) -> None:
         """Add default tags to a resource using tag IDs"""
         try:
@@ -752,58 +738,6 @@ class ImageProcessingSystem:
         finally:
             session.remove()
     
-    def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder):
-        """
-        단일 폴더를 처리하는 함수
-        
-        Args:
-            utils: Utills 인스턴스
-            session: 데이터베이스 세션
-            user_id: 사용자 ID
-            folder_path: 처리할 폴더 경로
-            default_tag_ids: 기본 태그 ID 목록
-            is_character_folder: 캐릭터 폴더 여부
-        """
-        from sqlalchemy import func
-        
-        # 현재 폴더의 태그 ID 목록 복사 (원본 목록 수정하지 않기 위해)
-        folder_tag_ids = default_tag_ids.copy()
-        
-        # 캐릭터 폴더 처리
-        if is_character_folder:
-            folder_name = os.path.basename(folder_path)
-            print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
-            
-            # 폴더 이름으로 태그 찾기 또는 생성
-            character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
-            
-            if character_tag_id:
-                # 캐릭터 태그를 현재 폴더의 태그 목록에만 추가
-                if character_tag_id not in folder_tag_ids:
-                    folder_tag_ids.append(character_tag_id)
-                    print(f"캐릭터 태그(ID: {character_tag_id})를 태그 목록에 추가했습니다.")
-                else:
-                    print(f"캐릭터 태그(ID: {character_tag_id})는 이미 태그 목록에 있습니다.")
-            
-            # 변경 사항 확정
-            session.commit()
-        
-        # Initialize processor for this folder
-        processor = ImageProcessingSystem(
-            user_id=user_id,
-            default_tag_ids=folder_tag_ids
-        )
-        
-        # Show processing information
-        print("\n처리 정보:")
-        print(f"폴더 경로: {folder_path}")
-        print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
-        print(f"적용될 태그 ID: {folder_tag_ids}")
-        
-        # Process the folder
-        processor.process_folder(folder_path)
-        print(f"폴더 '{os.path.basename(folder_path)}' 처리가 완료되었습니다.")
-
 def get_user_input():
     """Get interactive user input for processing parameters"""
     try:
@@ -1017,70 +951,59 @@ def get_subfolders(base_path):
                 subfolders.append(item_path)
     
     return subfolders
-# def main():
-#     # Configure logging
-#     logging.basicConfig(
-#         level=logging.INFO,
-#         format='%(asctime)s - %(levelname)s - %(message)s'
-#     )
-    
-#     try:
-#         # Utils 인스턴스 생성
-#         utils = Utills()
-        
-#         tag_mapping = create_tag_mapping()
-        
-#         # 매핑 결과 출력
-#         print(f"총 {len(tag_mapping)}개의 태그 매핑이 생성되었습니다.")
-        
-#         # 파일로 저장
-#         save_tag_mapping(tag_mapping)
 
-#         # Get user input
-#         user_id, folder_path, default_tag_ids = get_user_input()
+def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder):
+    """
+    단일 폴더를 처리하는 함수
+    
+    Args:
+        utils: Utills 인스턴스
+        session: 데이터베이스 세션
+        user_id: 사용자 ID
+        folder_path: 처리할 폴더 경로
+        default_tag_ids: 기본 태그 ID 목록
+        is_character_folder: 캐릭터 폴더 여부
+    """
+    from sqlalchemy import func
+    
+    # 현재 폴더의 태그 ID 목록 복사 (원본 목록 수정하지 않기 위해)
+    folder_tag_ids = default_tag_ids.copy()
+    
+    # 캐릭터 폴더 처리
+    if is_character_folder:
+        folder_name = os.path.basename(folder_path)
+        print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
         
-#         # 데이터베이스 연결
-#         session, server = utils.get_session()
+        # 폴더 이름으로 태그 찾기 또는 생성
+        character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
         
-#         try:
-#             # 입력값 검증
-#             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
-#             if not is_valid:
-#                 print(f"\n오류: {error_message}")
-#                 return
-                
-#             # Initialize processor
-#             processor = ImageProcessingSystem(
-#                 user_id=user_id,
-#                 default_tag_ids=default_tag_ids
-#             )
-            
-#             # Show processing information
-#             print("\n처리 정보:")
-#             print(f"사용자 ID: {user_id}")
-#             print(f"폴더 경로: {folder_path}")
-#             print(f"적용될 태그 ID: {default_tag_ids}")
-            
-#             # Confirm processing
-#             confirm = input("\n처리를 시작하시겠습니까? (y/n): ").strip().lower()
-#             if confirm != 'y':
-#                 print("프로그램을 종료합니다.")
-#                 return
-            
-#             # Process the folder
-#             processor.process_folder(folder_path)
-#             print("이미지 처리가 완료되었습니다.")
-            
-#         finally:
-#             utils.end_session(session)
-            
-#     except Exception as e:
-#         logging.error(f"처리 중 오류가 발생했습니다: {str(e)}")
-#         print("오류가 발생했습니다. 로그를 확인해주세요.")
-#     except KeyboardInterrupt:
-#         print("\n프로그램이 중단되었습니다.")
-#     finally:
-#         utils.stop_ssh_tunnel()
+        if character_tag_id:
+            # 캐릭터 태그를 현재 폴더의 태그 목록에만 추가
+            if character_tag_id not in folder_tag_ids:
+                folder_tag_ids.append(character_tag_id)
+                print(f"캐릭터 태그(ID: {character_tag_id})를 태그 목록에 추가했습니다.")
+            else:
+                print(f"캐릭터 태그(ID: {character_tag_id})는 이미 태그 목록에 있습니다.")
+        
+        # 변경 사항 확정
+        session.commit()
+    
+    # Initialize processor for this folder
+    processor = ImageProcessingSystem(
+        user_id=user_id,
+        default_tag_ids=folder_tag_ids
+    )
+    
+    # Show processing information
+    print("\n처리 정보:")
+    print(f"폴더 경로: {folder_path}")
+    print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
+    print(f"적용될 태그 ID: {folder_tag_ids}")
+    
+    # Process the folder
+    processor.process_folder(folder_path)
+    print(f"폴더 '{os.path.basename(folder_path)}' 처리가 완료되었습니다.")
+
 def main():
     # Configure logging
     logging.basicConfig(
