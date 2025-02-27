@@ -751,6 +751,58 @@ class ImageProcessingSystem:
             logging.error(f"Folder processing error: {str(e)}")
         finally:
             session.remove()
+    
+    def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder):
+        """
+        단일 폴더를 처리하는 함수
+        
+        Args:
+            utils: Utills 인스턴스
+            session: 데이터베이스 세션
+            user_id: 사용자 ID
+            folder_path: 처리할 폴더 경로
+            default_tag_ids: 기본 태그 ID 목록
+            is_character_folder: 캐릭터 폴더 여부
+        """
+        from sqlalchemy import func
+        
+        # 현재 폴더의 태그 ID 목록 복사 (원본 목록 수정하지 않기 위해)
+        folder_tag_ids = default_tag_ids.copy()
+        
+        # 캐릭터 폴더 처리
+        if is_character_folder:
+            folder_name = os.path.basename(folder_path)
+            print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
+            
+            # 폴더 이름으로 태그 찾기 또는 생성
+            character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
+            
+            if character_tag_id:
+                # 캐릭터 태그를 현재 폴더의 태그 목록에만 추가
+                if character_tag_id not in folder_tag_ids:
+                    folder_tag_ids.append(character_tag_id)
+                    print(f"캐릭터 태그(ID: {character_tag_id})를 태그 목록에 추가했습니다.")
+                else:
+                    print(f"캐릭터 태그(ID: {character_tag_id})는 이미 태그 목록에 있습니다.")
+            
+            # 변경 사항 확정
+            session.commit()
+        
+        # Initialize processor for this folder
+        processor = ImageProcessingSystem(
+            user_id=user_id,
+            default_tag_ids=folder_tag_ids
+        )
+        
+        # Show processing information
+        print("\n처리 정보:")
+        print(f"폴더 경로: {folder_path}")
+        print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
+        print(f"적용될 태그 ID: {folder_tag_ids}")
+        
+        # Process the folder
+        processor.process_folder(folder_path)
+        print(f"폴더 '{os.path.basename(folder_path)}' 처리가 완료되었습니다.")
 
 def get_user_input():
     """Get interactive user input for processing parameters"""
@@ -763,26 +815,36 @@ def get_user_input():
             except ValueError:
                 print("올바른 숫자를 입력해주세요.")
 
-        # Get folder path
+        # Get base folder path
         while True:
-            folder_path = input("이미지가 있는 폴더 경로를 입력해주세요: ").strip()
-            if os.path.exists(folder_path):
+            base_folder_path = input("작업할 폴더 경로를 입력해주세요: ").strip()
+            if os.path.exists(base_folder_path):
                 break
             print("존재하지 않는 경로입니다. 다시 입력해주세요.")
         
-        # 폴더가 캐릭터 폴더인지 확인
-        is_character_folder = False
+        # 자동으로 하위 폴더 감지 여부 확인
+        process_subfolders = False
         while True:
-            character_folder = input("이 폴더는 캐릭터 폴더입니까? (y/n): ").strip().lower()
-            if character_folder in ['y', 'n']:
-                is_character_folder = (character_folder == 'y')
+            subfolder_option = input("하위 폴더들을 각각 처리하시겠습니까? (y/n): ").strip().lower()
+            if subfolder_option in ['y', 'n']:
+                process_subfolders = (subfolder_option == 'y')
                 break
             print("'y' 또는 'n'을 입력해주세요.")
+            
+        # 폴더를 캐릭터 폴더로 처리할지 기본값 설정
+        default_character_folder = False
+        if process_subfolders:
+            while True:
+                auto_character = input("각 하위 폴더를 캐릭터 폴더로 처리할까요? (y/n): ").strip().lower()
+                if auto_character in ['y', 'n']:
+                    default_character_folder = (auto_character == 'y')
+                    break
+                print("'y' 또는 'n'을 입력해주세요.")
 
         # Get default tag IDs
         default_tag_ids = []
         while True:
-            add_tags = input("디폴트 태그를 추가하시겠습니까? (y/n): ").strip().lower()
+            add_tags = input("모든 폴더에 공통으로 적용할 디폴트 태그를 추가하시겠습니까? (y/n): ").strip().lower()
             if add_tags in ['y', 'n']:
                 if add_tags == 'y':
                     while True:
@@ -797,7 +859,7 @@ def get_user_input():
                 break
             print("'y' 또는 'n'을 입력해주세요.")
 
-        return user_id, folder_path, default_tag_ids, is_character_folder
+        return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder
 
     except KeyboardInterrupt:
         print("\n프로그램을 종료합니다.")
@@ -923,6 +985,38 @@ def get_or_create_character_tag(session, folder_name, user_id):
         print(f"오류: {str(e)}")
         return None
 
+def get_subfolders(base_path):
+    """
+    주어진 경로에서 모든 하위 폴더를 찾아 반환합니다.
+    
+    Args:
+        base_path: 기본 경로
+        
+    Returns:
+        list: 하위 폴더 경로 목록
+    """
+    subfolders = []
+    
+    # 경로가 파일인지 폴더인지 확인
+    if os.path.isfile(base_path):
+        return [os.path.dirname(base_path)]
+    
+    # 직접 이미지 파일이 있는지 확인
+    image_files = [f for f in os.listdir(base_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    if image_files:
+        # 이미지 파일이 직접 있으면 현재 폴더 추가
+        subfolders.append(base_path)
+    
+    # 하위 폴더 확인
+    for item in os.listdir(base_path):
+        item_path = os.path.join(base_path, item)
+        if os.path.isdir(item_path):
+            # 해당 폴더에 이미지 파일이 있는지 확인
+            files = [f for f in os.listdir(item_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            if files:  # 이미지 파일이 있는 폴더만 추가
+                subfolders.append(item_path)
+    
+    return subfolders
 # def main():
 #     # Configure logging
 #     logging.basicConfig(
@@ -1006,8 +1100,8 @@ def main():
         # 파일로 저장
         save_tag_mapping(tag_mapping)
 
-        # Get user input with character folder check
-        user_id, folder_path, default_tag_ids, is_character_folder = get_user_input()
+        # Get user input with enhanced options
+        user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder = get_user_input()
         
         # 데이터베이스 연결
         session, server = utils.get_session()
@@ -1016,53 +1110,61 @@ def main():
             # sqlalchemy func 가져오기
             from sqlalchemy import func
             
-            # 캐릭터 폴더 처리
-            if is_character_folder:
-                folder_name = os.path.basename(folder_path)
-                print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
-                
-                # 폴더 이름으로 태그 찾기 또는 생성
-                character_tag_id = get_or_create_character_tag(session, folder_name, user_id)
-                
-                if character_tag_id:
-                    # 캐릭터 태그를 디폴트 태그 목록에 추가
-                    if character_tag_id not in default_tag_ids:
-                        default_tag_ids.append(character_tag_id)
-                        print(f"캐릭터 태그(ID: {character_tag_id})를 디폴트 태그 목록에 추가했습니다.")
-                    else:
-                        print(f"캐릭터 태그(ID: {character_tag_id})는 이미 디폴트 태그 목록에 있습니다.")
-                
-                # 변경 사항 확정
-                session.commit()
-            
             # 입력값 검증
             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
             if not is_valid:
                 print(f"\n오류: {error_message}")
                 return
+            
+            # 폴더 목록 결정
+            if process_subfolders:
+                # 하위 폴더 검색
+                folders = get_subfolders(base_folder_path)
+                if not folders:
+                    print(f"'{base_folder_path}' 내에 이미지가 포함된 폴더가 없습니다.")
+                    return
                 
-            # Initialize processor
-            processor = ImageProcessingSystem(
-                user_id=user_id,
-                default_tag_ids=default_tag_ids
-            )
+                print(f"\n{len(folders)}개의 폴더가 감지되었습니다:")
+                for i, folder in enumerate(folders, 1):
+                    print(f"{i}. {folder}")
+            else:
+                # 단일 폴더 처리
+                folders = [base_folder_path]
             
-            # Show processing information
-            print("\n처리 정보:")
-            print(f"사용자 ID: {user_id}")
-            print(f"폴더 경로: {folder_path}")
-            print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
-            print(f"적용될 태그 ID: {default_tag_ids}")
-            
-            # Confirm processing
+            # 처리 시작 확인
             confirm = input("\n처리를 시작하시겠습니까? (y/n): ").strip().lower()
             if confirm != 'y':
                 print("프로그램을 종료합니다.")
                 return
             
-            # Process the folder
-            processor.process_folder(folder_path)
-            print("이미지 처리가 완료되었습니다.")
+            # 각 폴더 처리
+            for i, folder_path in enumerate(folders, 1):
+                print(f"\n[{i}/{len(folders)}] '{os.path.basename(folder_path)}' 폴더 처리 중...")
+                
+                if process_subfolders and len(folders) > 1:
+                    # 여러 폴더 처리 모드에서는 각 폴더를 캐릭터 폴더로 처리하는지 여부 결정
+                    is_character_folder = default_character_folder
+                    
+                    # 기본값이 False인 경우에만 물어봄
+                    if not default_character_folder:
+                        character_prompt = input(f"'{os.path.basename(folder_path)}'를 캐릭터 폴더로 처리할까요? (y/n, 기본값=n): ").strip().lower()
+                        is_character_folder = (character_prompt == 'y')
+                else:
+                    # 단일 폴더 모드에서는 사용자에게 직접 물어봄
+                    character_prompt = input(f"'{os.path.basename(folder_path)}'를 캐릭터 폴더로 처리할까요? (y/n): ").strip().lower()
+                    is_character_folder = (character_prompt == 'y')
+                
+                # 현재 폴더 처리
+                process_single_folder(
+                    utils=utils,
+                    session=session,
+                    user_id=user_id,
+                    folder_path=folder_path,
+                    default_tag_ids=default_tag_ids,
+                    is_character_folder=is_character_folder
+                )
+            
+            print("\n모든 폴더 처리가 완료되었습니다.")
             
         finally:
             utils.end_session(session)
@@ -1074,5 +1176,6 @@ def main():
         print("\n프로그램이 중단되었습니다.")
     finally:
         utils.stop_ssh_tunnel()
+
 if __name__ == "__main__":
     main()
