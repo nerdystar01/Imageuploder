@@ -987,8 +987,6 @@ def get_or_create_character_tag(session, folder_name, user_id):
 #         print("\n프로그램이 중단되었습니다.")
 #     finally:
 #         utils.stop_ssh_tunnel()
-# if __name__ == "__main__":
-#     main()
 def main():
     # Configure logging
     logging.basicConfig(
@@ -1076,3 +1074,5 @@ def main():
         print("\n프로그램이 중단되었습니다.")
     finally:
         utils.stop_ssh_tunnel()
+if __name__ == "__main__":
+    main()
