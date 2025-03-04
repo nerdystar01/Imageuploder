@@ -59,9 +59,40 @@ def show_menu():
 
 def search_tag_function(user_id: int):
     """태그 검색 기능 호출"""
-    search_term = input("검색할 태그 이름을 입력해주세요 (빈 칸 입력 시 전체 조회): ").strip()
-    tags = search_normal_tags(user_id, search_term)
-    display_tags(tags)
+    print("\n=== 태그 검색 시스템 ===")
+    print("1. 태그 검색 (단일 페이지)")
+    print("2. 태그 리스트 열람 (페이지네이션)")
+    print("3. 돌아가기")
+    
+    choice = input("\n원하는 기능을 선택하세요: ").strip()
+    
+    if choice == '1':
+        # 검색어 입력
+        search_term = input("검색할 태그 이름을 입력해주세요 (빈 칸 입력 시 전체 조회): ").strip()
+        
+        # 태그 검색 수행 (단일 페이지)
+        from search_tags import search_tags_simple
+        search_tags_simple(user_id, search_term)
+        
+    elif choice == '2':
+        # 태그 열람 여부 확인
+        view_tags = input("태그리스트를 열람하시겠습니까? (y/n): ").strip().lower()
+        
+        if view_tags == 'y':
+            # 검색어 입력
+            search_term = input("검색할 태그 이름을 입력해주세요 (빈 칸 입력 시 전체 조회): ").strip()
+            
+            # 태그 페이지별 탐색
+            from search_tags import browse_tags
+            browse_tags(user_id, search_term)
+        else:
+            print("태그 열람을 취소했습니다.")
+    
+    elif choice == '3':
+        print("메인 메뉴로 돌아갑니다.")
+    
+    else:
+        print("잘못된 선택입니다.")
 
 def prompt_tag_analysis(user_id: int):
     """프롬프트 태그 분석 기능 호출"""

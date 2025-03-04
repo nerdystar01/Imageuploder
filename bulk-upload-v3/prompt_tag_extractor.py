@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import re
 import logging
-from typing import List, Tuple, Dict, Set, Any
+from typing import List, Tuple, Dict, Any
+
+from sqlalchemy import func
 
 # 로컬 모듈 임포트
 from manager import CharacterManager, OutfitManager, EventManager
-from utills import Utills
 from models import ColorCodeTags
+from session_utills import get_session, end_session
 
 class PromptTagExtractor:
     """
@@ -170,8 +170,6 @@ class PromptTagExtractor:
         result['has_4ground9_character'] = extracted_tags['has_4ground9_character']
         
         try:
-            from sqlalchemy import func
-            
             # 각 카테고리별로 태그 존재 여부 확인
             for category in ['characters', 'outfits', 'events']:
                 for alias, name in extracted_tags[category]:
@@ -205,17 +203,14 @@ def analyze_prompt(prompt_text: str, use_db: bool = False) -> Dict[str, Any]:
     Returns:
         Dict: 추출된 태그 정보
     """
-    utils = None
-    session = None
-    server = None
+    session, server = None, None
     
     try:
         extractor = None
         
         if use_db:
             # 데이터베이스 연결
-            utils = Utills()
-            session, server = utils.get_session()
+            session, server = get_session()
             extractor = PromptTagExtractor(session)
         else:
             extractor = PromptTagExtractor()
@@ -241,8 +236,8 @@ def analyze_prompt(prompt_text: str, use_db: bool = False) -> Dict[str, Any]:
             'error': str(e)
         }
     finally:
-        if utils and session:
-            utils.end_session(session)
+        if session and server:
+            end_session(session, server)
 
 def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
     """
@@ -291,6 +286,11 @@ def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
 
 def main():
     """메인 함수"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+    
     print("\n===== 프롬프트 태그 추출기 =====")
     print("프롬프트에서 태그를 추출하고 분석합니다.")
     
@@ -328,6 +328,7 @@ def main():
         return
     
     # 프롬프트 분석
+    print("\n프롬프트 분석 중...")
     extracted_tags = analyze_prompt(prompt_text, use_db)
     
     # 결과 출력

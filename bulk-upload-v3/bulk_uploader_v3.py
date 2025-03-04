@@ -17,13 +17,12 @@ from PIL import Image, PngImagePlugin
 import piexif
 import piexif.helper
 from tqdm import tqdm
-from sshtunnel import SSHTunnelForwarder
 from google.cloud import storage
 from google.oauth2 import service_account
 
 # Database
-from sqlalchemy.orm import Session, scoped_session, sessionmaker
-from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 
 # Local Imports
 from models import (
@@ -35,146 +34,30 @@ from models import (
 )
 from manager import CharacterManager, OutfitManager, EventManager
 
-
+from session_utills import get_session, end_session, check_connection, upload_to_bucket, upload_image_to_gcp_bucket
 
 def retry_on_connection_error(max_retries=3):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
+            # 세션 객체 가져오기 (self에서)
+            session = kwargs.get('session', None)
+            if not session and args and isinstance(args[0], Session):
+                session = args[0]
+                
             for attempt in range(max_retries):
                 try:
                     return func(self, *args, **kwargs)
                 except (psycopg2.OperationalError, SSLError) as e:
                     if attempt < max_retries - 1:
                         logging.warning(f"Connection error: {str(e)}. Retrying... ({attempt + 1}/{max_retries})")
-                        self.check_connection()  # 연결 상태 확인 및 재연결
+                        # 연결 재시도
                         time.sleep(5)
                     else:
                         logging.error(f"Connection failed after {max_retries} attempts")
                         raise
         return wrapper
     return decorator
-# ------------------------------
-#  SSH Connection    
-# ------------------------------
-class Utills:
-    def __init__(self):
-        self.server = None
-
-    def start_ssh_tunnel(self, max_retries=3, retry_delay=5):
-        for attempt in range(max_retries):
-            try:
-                self.server = SSHTunnelForwarder(
-                    ('34.64.105.81', 22),
-                    ssh_username='nerdystar',
-                    ssh_pkey='./wcidfu-ssh',
-                    remote_bind_address=('10.1.31.44', 5432),
-                    set_keepalive=60
-                )
-                self.server.start()
-                logging.info("SSH tunnel established")
-                return self.server
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    logging.warning(f"SSH tunnel attempt {attempt + 1} failed: {str(e)}. Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                else:
-                    logging.error(f"Failed to establish SSH tunnel after {max_retries} attempts: {str(e)}")
-                    raise
-
-    def check_connection(self):
-        if self.server is None or not self.server.is_active:
-            logging.info("SSH connection is not active. Reconnecting...")
-            self.start_ssh_tunnel()
-
-    def stop_ssh_tunnel(self):
-        if self.server:
-            self.server.stop()
-            logging.info("SSH tunnel closed")
-
-    @classmethod
-    def upload_to_bucket(cls, blob_name, data, bucket_name):
-        current_script_path = os.path.abspath(__file__)
-        base_directory = os.path.dirname(current_script_path)
-        
-        credentials_path = os.path.join(base_directory, 'wcidfu-77f802b00777.json')
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
-
-        storage_client = storage.Client(credentials = credentials)
-        bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-        blob.upload_from_string(data)
-        clean_blob_name = blob_name.replace("_media/", "")    
-        return clean_blob_name
-    
-    def get_session(self):
-        retries = 3
-        for attempt in range(retries):
-            try:
-                server = self.start_ssh_tunnel()
-                engine = setup_database_engine("nerdy@2024", server.local_bind_port)
-                session_factory = sessionmaker(bind=engine)
-                session = scoped_session(session_factory)
-                
-                # Test connection - SQLAlchemy 2.0 스타일로 수정
-                from sqlalchemy import text
-                session().execute(text("SELECT 1"))
-                
-                return session, server
-            except Exception as e:
-                if attempt < retries - 1:
-                    logging.warning(f"Database connection attempt {attempt + 1} failed. Retrying...")
-                    time.sleep(5)
-                    if self.server:
-                        self.stop_ssh_tunnel()
-                else:
-                    logging.error(f"Failed to establish database connection after {retries} attempts")
-                    raise
-
-    def end_session(self, session):
-        try:
-            # 먼저 SSH 터널을 종료하기 전에 모든 데이터베이스 작업을 완료
-            if session:
-                try:
-                    session.close()
-                except:
-                    pass
-                
-                try:
-                    session.remove()
-                except:
-                    pass
-                
-            # 마지막으로 SSH 터널 종료
-            if self.server:
-                try:
-                    self.server.stop()
-                    logging.info("SSH tunnel closed")
-                except:
-                    pass
-                    
-        except Exception as e:
-            logging.warning(f"Session cleanup warning: {str(e)}")
-            pass
-        
-    @classmethod
-    def upload_image_to_gcp_bucket(cls, blob_name, data, bucket_name):
-        current_script_path = os.path.abspath(__file__)
-        base_directory = os.path.dirname(current_script_path)
-        
-        credentials_path = os.path.join(base_directory, 'wcidfu-77f802b00777.json')
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-        credentials = service_account.Credentials.from_service_account_file(credentials_path)
-
-        storage_client = storage.Client(credentials = credentials)
-        bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-        blob.upload_from_string(data)
-        clean_blob_name = blob_name.replace("_media/", "")    
-        return clean_blob_name
 
 # ------------------------------
 #  Png Utill
@@ -402,7 +285,7 @@ class PromptParser:
 # ------------------------------
 class CreateResource:
     def __init__(self):
-        self.utils = Utills()
+        pass
 
     def create_resource(self, user_id: int, original_image: Image.Image, 
                        image_128: Image.Image, image_512: Image.Image, 
@@ -466,7 +349,7 @@ class CreateResource:
         try:
             # Upload original image
             original_blob_name = f"_media/resource/{resource.uuid}.png"
-            resource.image = Utills.upload_to_bucket(
+            resource.image = upload_to_bucket(
                 original_blob_name,
                 original_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -474,7 +357,7 @@ class CreateResource:
 
             # Upload 128px thumbnail
             thumb_128_blob_name = f"_media/resource_thumbnail/{resource.uuid}_128.png"
-            resource.thumbnail_image = Utills.upload_to_bucket(
+            resource.thumbnail_image = upload_to_bucket(
                 thumb_128_blob_name,
                 image_128_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -482,7 +365,7 @@ class CreateResource:
 
             # Upload 512px thumbnail
             thumb_512_blob_name = f"_media/thumbnail_512/{resource.uuid}_512.png"
-            resource.thumbnail_image_512 = Utills.upload_to_bucket(
+            resource.thumbnail_image_512 = upload_to_bucket(
                 thumb_512_blob_name,
                 image_512_buffer.getvalue(),
                 "wcidfu-bucket"
@@ -575,7 +458,6 @@ class CreateResource:
 # ------------------------------
 class ImageProcessingSystem:
     def __init__(self, user_id: int, default_tag_ids: List[int] = None):
-        self.utils = Utills()
         self.png_util = PngUtill()
         self.prompt_parser = PromptParser()
         self.resource_creator = CreateResource()
@@ -673,7 +555,7 @@ class ImageProcessingSystem:
             logging.warning(f"No image files found in {folder_path}")
             return
             
-        session, server = self.utils.get_session()
+        session, server = get_session()
         first_id = None
         last_id = None
         processed_count = 0
@@ -736,7 +618,7 @@ class ImageProcessingSystem:
         except Exception as e:
             logging.error(f"Folder processing error: {str(e)}")
         finally:
-            session.remove()
+            end_session(session, server)
 
 def get_user_input():
     """Get interactive user input for processing parameters"""
@@ -978,7 +860,7 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
     단일 폴더를 처리하는 함수
     
     Args:
-        utils: Utills 인스턴스
+        utils: 사용하지 않음 (이전 코드와의 호환성을 위해 유지)
         session: 데이터베이스 세션
         user_id: 사용자 ID
         folder_path: 처리할 폴더 경로
@@ -1039,9 +921,6 @@ def main():
     )
     
     try:
-        # Utils 인스턴스 생성
-        utils = Utills()
-        
         tag_mapping = create_tag_mapping()
         
         # 매핑 결과 출력
@@ -1054,7 +933,7 @@ def main():
         user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder = get_user_input()
         
         # 데이터베이스 연결
-        session, server = utils.get_session()
+        session, server = get_session()
         
         try:
             # sqlalchemy func 가져오기
@@ -1109,7 +988,7 @@ def main():
                 
                 # 현재 폴더 처리
                 process_single_folder(
-                    utils=utils,
+                    utils=None,  # utils 매개변수는 더 이상 사용하지 않음
                     session=session,
                     user_id=user_id,
                     folder_path=folder_path,
@@ -1131,15 +1010,13 @@ def main():
                 print("\n이번 작업에서 새로 생성된 태그가 없습니다.")
             
         finally:
-            utils.end_session(session)
+            end_session(session, server)
             
     except Exception as e:
         logging.error(f"처리 중 오류가 발생했습니다: {str(e)}")
         print("오류가 발생했습니다. 로그를 확인해주세요.")
     except KeyboardInterrupt:
         print("\n프로그램이 중단되었습니다.")
-    finally:
-        utils.stop_ssh_tunnel()
 
 if __name__ == "__main__":
     main()
