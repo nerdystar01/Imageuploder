@@ -173,7 +173,7 @@ class Resource(Base):
    # Bitcoin
    block_hash = Column(Text, nullable=True)
     
-   tag_ids = Column(ARRAY(Integer), server_default=func.array([], type_=Integer), nullable=False)
+   tag_ids = Column(ARRAY(Integer), default=[], nullable=False)
 
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
