@@ -5,11 +5,12 @@ from typing import List
 from urllib.parse import quote_plus
 
 
+
 # SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 import pytz
 
 # 서울 timezone 설정
@@ -172,7 +173,7 @@ class Resource(Base):
    # Bitcoin
    block_hash = Column(Text, nullable=True)
     
-   
+   tag_ids = Column(ARRAY(Integer), server_default=func.array([], type_=Integer), nullable=False)
 
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
