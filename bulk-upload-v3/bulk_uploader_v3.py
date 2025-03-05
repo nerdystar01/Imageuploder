@@ -538,6 +538,8 @@ class ImageProcessingSystem:
             self.add_create_tags(resource, session)
             self.add_default_tags(resource, session)
 
+            resource.tag_ids = [tag.id for tag in resource.tags]
+            session.flush()
 
             return resource  # resource 객체 자체를 반환
 
