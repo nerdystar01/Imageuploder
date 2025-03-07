@@ -1,0 +1,39 @@
+login_app/
+│
+├── main.py                  # 애플리케이션 진입점
+├── build_exe.py             # EXE 빌드 스크립트
+│
+├── assets/                  # 이미지, 아이콘 등 자원 파일
+│   ├── icons/
+│   │   ├── app_icon.ico
+│   │   └── ...
+│   ├── images/
+│   │   └── ...
+│   └── styles/
+│       └── main_style.qss   # QSS 스타일시트
+│
+├── src/                     # 소스 코드
+│   ├── __init__.py
+│   ├── config.py            # 설정 파일
+│   ├── database/            # 데이터베이스 관련 코드
+│   │   ├── __init__.py
+│   │   └── db_manager.py
+│   │
+│   ├── ui/                  # UI 관련 코드
+│   │   ├── __init__.py
+│   │   ├── login_window.py  # 로그인 화면
+│   │   ├── main_window.py   # 메인 선택 화면
+│   │   └── function_windows/
+│   │       ├── __init__.py
+│   │       ├── function1_window.py  # 기능 1 화면
+│   │       ├── function2_window.py  # 기능 2 화면
+│   │       └── function3_window.py  # 기능 3 화면
+│   │
+│   └── utils/               # 유틸리티 함수
+│       ├── __init__.py
+│       └── helpers.py
+│
+└── tests/                   # 테스트 코드
+    ├── __init__.py
+    ├── test_login.py
+    └── test_functions.py

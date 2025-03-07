@@ -1,0 +1,18 @@
+# 기본 요구사항
+SQLAlchemy>=1.4.0
+sshtunnel>=0.4.0
+cryptography>=36.0.0
+psycopg2-binary>=2.9.0
+
+# GUI 요구사항
+PyQt5>=5.15.0
+
+# EXE 빌드 요구사항
+PyInstaller>=5.6.0
+
+# 유틸리티
+python-dateutil>=2.8.0
+pytz>=2021.1
+
+# 테스트 요구사항
+pytest>=7.0.0
