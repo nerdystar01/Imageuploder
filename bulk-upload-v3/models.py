@@ -171,7 +171,7 @@ class Resource(Base):
    # Bitcoin
    block_hash = Column(Text, nullable=True)
     
-   tag_ids = Column(Text, default='[]', nullable=False)
+   tag_ids = Column(ARRAY(Integer, dimensions=1), default=lambda: [], nullable=False)
    count_like = Column(Integer, default=0)
 
    # Timestamps
