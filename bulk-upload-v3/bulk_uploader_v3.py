@@ -98,41 +98,195 @@ class PngUtill:
         
         return geninfo
 
-    def parse_generation_parameters(self, x: str):
-        res = {}
-        lines = x.strip().split("\n")  # 입력된 문자열을 줄 단위로 분리
+    # def parse_generation_parameters(self, x: str):
+    #     res = {}
+    #     lines = x.strip().split("\n")  # 입력된 문자열을 줄 단위로 분리
 
-        for i, line in enumerate(lines):  # 각 줄과 그 인덱스에 대해 반복
-            line = line.strip()  # 현재 줄의 앞뒤 공백 제거
-            if i == 0:  # 첫 번째 줄인 경우
-                res["Prompt"] = line
-            elif i == 1 and line.startswith("Negative prompt:"):  # 두 번째 줄이며 "Negative prompt:"로 시작하는 경우
-                res["Negative prompt"] = line[16:].strip()
-            elif i == 2:  # 세 번째 줄인 경우, 옵션들을 처리
-                # 여기에서 각 키-값에 대한 매칭 작업을 수행합니다.
+    #     for i, line in enumerate(lines):  # 각 줄과 그 인덱스에 대해 반복
+    #         line = line.strip()  # 현재 줄의 앞뒤 공백 제거
+    #         if i == 0:  # 첫 번째 줄인 경우
+    #             res["Prompt"] = line
+    #         elif i == 1 and line.startswith("Negative prompt:"):  # 두 번째 줄이며 "Negative prompt:"로 시작하는 경우
+    #             res["Negative prompt"] = line[16:].strip()
+    #         elif i == 2:  # 세 번째 줄인 경우, 옵션들을 처리
+    #             # 여기에서 각 키-값에 대한 매칭 작업을 수행합니다.
+    #             keys = [
+    #                 "Steps", "Sampler", "CFG scale", "Seed", "Size", 
+    #                 "Model hash", "Model", "VAE hash", "VAE", 
+    #                 "Denoising strength", "Clip skip", "Hires upscale",
+    #                 "Hires upscaler", 
+    #             ]
+    #             for key in keys:
+    #                 # 정규 표현식을 사용하여 각 키에 해당하는 값을 찾습니다.
+    #                 match = re.search(fr'{key}: ([^,]+),', line)
+    #                 if match:
+    #                     # 찾은 값은 그룹 1에 있습니다.
+    #                     value = match.group(1).strip()
+    #                     res[key] = value
+                
+    #             controlnet_patterns = re.findall(r'ControlNet \d+: "(.*?)"', line, re.DOTALL)
+    #             for idx, cn_content in enumerate(controlnet_patterns):
+    #                 # ControlNet 내부의 키-값 쌍을 추출합니다.
+    #                 cn_dict = {}
+    #                 cn_pairs = re.findall(r'(\w+): ([^,]+)', cn_content)
+    #                 for key, value in cn_pairs:
+    #                     cn_dict[key.strip()] = value.strip()
+    #                 res[f"ControlNet {idx}"] = cn_dict
+
+    #     return res
+    def parse_generation_parameters(x: str):
+        """
+        스테이블 디퓨전 생성 파라미터를 파싱합니다.
+        네거티브 프롬프트를 기준으로 프롬프트와 파라미터를 분리합니다.
+        
+        Args:
+            x (str): 파싱할 생성 파라미터 문자열
+            
+        Returns:
+            dict: 파싱된 파라미터를 담은 딕셔너리
+        """
+        import re
+        
+        res = {}
+        
+        # 네거티브 프롬프트 위치 찾기
+        neg_prompt_pattern = r'Negative prompt:'
+        neg_prompt_match = re.search(neg_prompt_pattern, x)
+        
+        if neg_prompt_match:
+            # 네거티브 프롬프트 시작 위치
+            neg_start = neg_prompt_match.start()
+            
+            # 프롬프트 추출 (네거티브 프롬프트 이전 텍스트)
+            prompt = x[:neg_start].strip()
+            res["Prompt"] = prompt
+            
+            # 네거티브 프롬프트 이후 텍스트 가져오기
+            remaining_text = x[neg_start:]
+            
+            # 네거티브 프롬프트와 파라미터 분리
+            # 첫 번째 쉼표+공백 기준으로 나누기 (예: "Steps: 32")
+            params_pattern = r'Steps:'
+            params_match = re.search(params_pattern, remaining_text)
+            
+            if params_match:
+                params_start = params_match.start()
+                
+                # 네거티브 프롬프트 추출
+                neg_prompt = remaining_text[:params_start].replace('Negative prompt:', '', 1).strip()
+                res["Negative prompt"] = neg_prompt
+                
+                # 파라미터 추출
+                params_text = remaining_text[params_start:]
+                
+                # 주요 파라미터 추출
+                # 추출할 주요 파라미터
                 keys = [
                     "Steps", "Sampler", "CFG scale", "Seed", "Size", 
                     "Model hash", "Model", "VAE hash", "VAE", 
                     "Denoising strength", "Clip skip", "Hires upscale",
-                    "Hires upscaler", 
+                    "Hires upscaler", "Schedule type"
                 ]
+                
+                # 각 파라미터 추출
                 for key in keys:
-                    # 정규 표현식을 사용하여 각 키에 해당하는 값을 찾습니다.
-                    match = re.search(fr'{key}: ([^,]+),', line)
-                    if match:
-                        # 찾은 값은 그룹 1에 있습니다.
-                        value = match.group(1).strip()
+                    # 정규식을 사용하여 파라미터 찾기
+                    # 패턴 1: "키: 값," 형태 (쉼표로 끝나는 경우)
+                    pattern1 = fr'{re.escape(key)}: ([^,]+),'
+                    match1 = re.search(pattern1, params_text)
+                    
+                    if match1:
+                        value = match1.group(1).strip()
+                        res[key] = value
+                        continue
+                        
+                    # 패턴 2: "키: 값" 형태 (줄 끝이나 문자열 끝에 있는 경우)
+                    pattern2 = fr'{re.escape(key)}: ([^\n,]+)(?:\n|$)'
+                    match2 = re.search(pattern2, params_text)
+                    
+                    if match2:
+                        value = match2.group(1).strip()
                         res[key] = value
                 
-                controlnet_patterns = re.findall(r'ControlNet \d+: "(.*?)"', line, re.DOTALL)
+                # ControlNet 관련 패턴 추출
+                controlnet_patterns = re.findall(r'ControlNet \d+: "(.*?)"', params_text, re.DOTALL)
                 for idx, cn_content in enumerate(controlnet_patterns):
-                    # ControlNet 내부의 키-값 쌍을 추출합니다.
+                    # ControlNet 내부의 키-값 쌍을 추출
                     cn_dict = {}
                     cn_pairs = re.findall(r'(\w+): ([^,]+)', cn_content)
                     for key, value in cn_pairs:
                         cn_dict[key.strip()] = value.strip()
                     res[f"ControlNet {idx}"] = cn_dict
-
+                
+                # Lora 해시 추출
+                lora_hash_match = re.search(r'Lora hashes: "(.*?)"', params_text)
+                if lora_hash_match:
+                    res["Lora hashes"] = lora_hash_match.group(1).strip()
+                    
+            else:
+                # Steps가 없는 경우 전체를 네거티브 프롬프트로 처리
+                res["Negative prompt"] = remaining_text.replace('Negative prompt:', '', 1).strip()
+        else:
+            # 네거티브 프롬프트가 없는 경우
+            # Steps나 다른 파라미터 찾기
+            params_match = re.search(r'Steps:', x)
+            
+            if params_match:
+                params_start = params_match.start()
+                
+                # 프롬프트 추출
+                prompt = x[:params_start].strip()
+                res["Prompt"] = prompt
+                
+                # 파라미터 추출
+                params_text = x[params_start:]
+                
+                # 주요 파라미터 추출
+                keys = [
+                    "Steps", "Sampler", "CFG scale", "Seed", "Size", 
+                    "Model hash", "Model", "VAE hash", "VAE", 
+                    "Denoising strength", "Clip skip", "Hires upscale",
+                    "Hires upscaler", "Schedule type"
+                ]
+                
+                # 각 파라미터 추출
+                for key in keys:
+                    # 정규식을 사용하여 파라미터 찾기
+                    # 패턴 1: "키: 값," 형태 (쉼표로 끝나는 경우)
+                    pattern1 = fr'{re.escape(key)}: ([^,]+),'
+                    match1 = re.search(pattern1, params_text)
+                    
+                    if match1:
+                        value = match1.group(1).strip()
+                        res[key] = value
+                        continue
+                        
+                    # 패턴 2: "키: 값" 형태 (줄 끝이나 문자열 끝에 있는 경우)
+                    pattern2 = fr'{re.escape(key)}: ([^\n,]+)(?:\n|$)'
+                    match2 = re.search(pattern2, params_text)
+                    
+                    if match2:
+                        value = match2.group(1).strip()
+                        res[key] = value
+                
+                # ControlNet 관련 패턴 추출
+                controlnet_patterns = re.findall(r'ControlNet \d+: "(.*?)"', params_text, re.DOTALL)
+                for idx, cn_content in enumerate(controlnet_patterns):
+                    # ControlNet 내부의 키-값 쌍을 추출
+                    cn_dict = {}
+                    cn_pairs = re.findall(r'(\w+): ([^,]+)', cn_content)
+                    for key, value in cn_pairs:
+                        cn_dict[key.strip()] = value.strip()
+                    res[f"ControlNet {idx}"] = cn_dict
+                
+                # Lora 해시 추출
+                lora_hash_match = re.search(r'Lora hashes: "(.*?)"', params_text)
+                if lora_hash_match:
+                    res["Lora hashes"] = lora_hash_match.group(1).strip()
+            else:
+                # 파라미터가 없는 경우 전체를 프롬프트로 처리
+                res["Prompt"] = x.strip()
+        
         return res
 
     def geninfo_params(self, image):
