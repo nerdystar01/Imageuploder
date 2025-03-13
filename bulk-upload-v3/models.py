@@ -168,8 +168,6 @@ class Resource(Base):
    # Slack
    slack_timestamp = Column(Text, default="")
 
-   #
-   binary_number_pattern = Column(Text, default="")
    # Bitcoin
    block_hash = Column(Text, nullable=True)
     
@@ -203,7 +201,6 @@ class ColorCodeTags(Base):
    tag = Column(String(4000))
    type = Column(String(10), default='normal')
    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
-   binary_number_mask = Column(String(4000), default="")
    
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
