@@ -134,7 +134,7 @@ class PngUtill:
     #                 res[f"ControlNet {idx}"] = cn_dict
 
     #     return res
-    def parse_generation_parameters(x: str):
+    def parse_generation_parameters(self, x: str):
         """
         스테이블 디퓨전 생성 파라미터를 파싱합니다.
         네거티브 프롬프트를 기준으로 프롬프트와 파라미터를 분리합니다.
