@@ -268,7 +268,7 @@ class CharacterManager(BaseManager):
             # 조아
             'Joa': BaseItem('Joa', ['joa,', '4g9_joa,']),
             # 로라
-            'Lora': BaseItem('Lora', ['lora,', '4g9_lora,']),
+            'Lora': BaseItem('Lora', ['nslora,', '4g9_lora,']),
             # 마더
             'Mother': BaseItem('Mother', ['mother,', '4g9_mother,']),
             # 프리
