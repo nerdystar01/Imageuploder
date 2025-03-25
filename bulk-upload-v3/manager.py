@@ -449,6 +449,7 @@ class CharacterManager(BaseManager):
             'Yujin': BaseItem('Yujin', ['nsyujin,']),
             # NPC Zachary
             'Zachary': BaseItem('Zachary', ['nszachary,']),
+            'Blacky': BaseItem('Blacky', ['blacky, nsblacky'])
         }
 
 class OutfitManager(BaseManager):
