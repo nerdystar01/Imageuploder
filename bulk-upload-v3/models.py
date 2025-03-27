@@ -78,6 +78,8 @@ class User(Base):
    nickname = Column(String(256), nullable=True)
    google_email = Column(String, unique=True, nullable=False)
    metamask_wallet_address = Column(String, unique=True, nullable=False)
+   profile_image = Column(String, nullable=True)
+   biography = Column(String(3000), nullable=True)
 
    # Relationships
    liked_resources = relationship("Resource", secondary=resource_likes, back_populates="likes")
