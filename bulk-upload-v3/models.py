@@ -155,6 +155,7 @@ class Resource(Base):
    uuid = Column(UUID(as_uuid=True), default=uuid.uuid4)
    thumbnail_image = Column(String(200), default="")
    thumbnail_image_512 = Column(String(300), default="")
+   thumbnail_image_192 = Column(String(300), default="")
    is_variation = Column(Boolean, default=False)
    star_rating = Column(Integer, default=0)
    sd_vae = Column(String(200), default="")

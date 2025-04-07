@@ -311,11 +311,10 @@ class PngUtill:
         image_bytes.seek(0)
         return Image.open(image_bytes)
 
-    def create_image_scales(self, image_path, heights=(128, 512)):
+    def create_image_scales(self, image_path, heights=(128, 192, 512)):
         original_image = Image.open(image_path)
         resized_images = {height: self.scale_image_by_height(original_image, height) for height in heights}
-        return original_image, resized_images[128], resized_images[512]
-
+        return original_image, resized_images[128], resized_images[192], resized_images[512]
 # ------------------------------
 #  PromptParser
 # ------------------------------
@@ -442,14 +441,15 @@ class CreateResource:
         pass
 
     def create_resource(self, user_id: int, original_image: Image.Image, 
-                       image_128: Image.Image, image_512: Image.Image, 
-                       session: Session) -> Resource:
+                    image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
+                    session: Session) -> Resource:
         """Create a new resource with uploaded images
         
         Args:
             user_id: User ID for the resource
             original_image: Original PIL image
             image_128: Thumbnail image (128px)
+            image_192: Thumbnail image (192px)
             image_512: Thumbnail image (512px)
             session: Database session
             
@@ -464,7 +464,7 @@ class CreateResource:
             
             # Upload images
             try:
-                self._upload_images(new_resource, original_image, image_128, image_512)
+                self._upload_images(new_resource, original_image, image_128, image_192, image_512)
                 session.commit()
                 return new_resource
             except Exception as e:
@@ -478,13 +478,14 @@ class CreateResource:
             raise
     
     def _upload_images(self, resource: Resource, original_image: Image.Image,
-                      image_128: Image.Image, image_512: Image.Image) -> None:
+                    image_128: Image.Image, image_192: Image.Image, image_512: Image.Image) -> None:
         """Upload original and thumbnail images to storage
         
         Args:
             resource: Resource object to update
             original_image: Original PIL image
             image_128: Thumbnail image (128px)
+            image_192: Thumbnail image (192px)
             image_512: Thumbnail image (512px)
         """
         # Convert images to bytes
@@ -495,6 +496,10 @@ class CreateResource:
         image_128_buffer = io.BytesIO()
         image_128.save(image_128_buffer, format="PNG")
         image_128_buffer.seek(0)
+        
+        image_192_buffer = io.BytesIO()
+        image_192.save(image_192_buffer, format="PNG")
+        image_192_buffer.seek(0)
 
         image_512_buffer = io.BytesIO()
         image_512.save(image_512_buffer, format="PNG")
@@ -514,6 +519,14 @@ class CreateResource:
             resource.thumbnail_image = upload_to_bucket(
                 thumb_128_blob_name,
                 image_128_buffer.getvalue(),
+                "wcidfu-bucket"
+            )
+            
+            # Upload 192px thumbnail
+            thumb_192_blob_name = f"_media/thumbnail_192/{resource.uuid}_192.png"
+            resource.thumbnail_image_192 = upload_to_bucket(
+                thumb_192_blob_name,
+                image_192_buffer.getvalue(),
                 "wcidfu-bucket"
             )
 
@@ -669,12 +682,13 @@ class ImageProcessingSystem:
         try:
             original_image = Image.open(image_path)
             image_128 = self.png_util.scale_image_by_height(original_image, 128)
+            image_192 = self.png_util.scale_image_by_height(original_image, 192)
             image_512 = self.png_util.scale_image_by_height(original_image, 512)
             
             geninfo, params = self.png_util.geninfo_params(original_image)
             
             resource = self.resource_creator.create_resource(
-                self.user_id, original_image, image_128, image_512, session
+                self.user_id, original_image, image_128, image_192, image_512, session
             )
             
             if params:
