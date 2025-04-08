@@ -512,7 +512,8 @@ class OutfitManager(BaseManager):
             
             # 전통의상
             'japanese_clothes': BaseItem('japanese_clothes', ['japanese clothes,', 'japanese_clothes,']),
-            'korean_clothes': BaseItem('korean_clothes', ['korean clothes,', 'korean_clothes,']),
+            # 'korean_clothes': BaseItem('korean_clothes', ['korean clothes,', 'korean_clothes,']),
+            'hanbok': BaseItem('hanbok', ['korean clothes,', 'korean_clothes,', 'hanbok,']),
             
             # 코스튬
             'animal_costume': BaseItem('animal_costume', ['animal costume,', 'animal_costume,']),
