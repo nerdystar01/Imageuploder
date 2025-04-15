@@ -7,7 +7,7 @@ from urllib.parse import quote_plus
 
 
 # SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint, func, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
@@ -167,7 +167,9 @@ class Resource(Base):
    count_download = Column(Integer, default=0)
    royalty = Column(Float, default=0.0)
    gpt_vision_score = Column(Integer, nullable=True)
-   challenge_points = Column(Integer, default=0, nullable=False)
+   challenge_points = Column(Integer, default=0, server_default=text('0'), nullable=False)
+
+
 
    # Slack
    slack_timestamp = Column(Text, default="")
