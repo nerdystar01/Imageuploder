@@ -167,7 +167,7 @@ class Resource(Base):
    count_download = Column(Integer, default=0)
    royalty = Column(Float, default=0.0)
    gpt_vision_score = Column(Integer, nullable=True)
-   challenge_points = Column(Integer, default=0)
+   challenge_points = Column(Integer, default=0, nullable=False)
 
    # Slack
    slack_timestamp = Column(Text, default="")
