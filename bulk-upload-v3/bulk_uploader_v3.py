@@ -458,7 +458,7 @@ class CreateResource:
         """
         try:
             # Create new resource
-            new_resource = Resource(user_id=user_id)
+            new_resource = Resource(user_id=user_id, challenge_points = 0)
             session.add(new_resource)
             session.flush()  # Get the ID without committing
             
