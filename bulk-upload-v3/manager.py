@@ -559,6 +559,7 @@ class InstrumentManager(BaseManager):
             'Harmonica': BaseItem('Harmonica', ['harmonica,']),
             'Ocarina': BaseItem('Ocarina', ['ocarina,']),
             'Recorder': BaseItem('Recorder', ['recorder,']),
+            'Drum': BaseItem('Drum', ['drun, ', 'drumsticks, ']),
             
             # 악기 - 현악기
             'Viola (instrument)': BaseItem('Viola', ['viola (instrument),']),
