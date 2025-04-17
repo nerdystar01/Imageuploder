@@ -21,7 +21,7 @@ from models import (
     User,
     ColorCodeTags
 )
-from manager import CharacterManager, OutfitManager, EventManager
+from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -229,6 +229,7 @@ class Converter:
         self.character_manager = CharacterManager()
         self.outfit_manager = OutfitManager()
         self.event_manager = EventManager()
+        self.instrument_manager = InstrumentManager()
         self.server = None
         self.extension_options = extension_options or {
             'use_multiple_tag': False,
@@ -254,6 +255,7 @@ class Converter:
                 (self.character_manager, "캐릭터"),
                 (self.outfit_manager, "의상"),
                 (self.event_manager, "이벤트/배경")
+                (self.instrument_manager, "악기")
             ]
             
             for manager, category in managers:
@@ -349,12 +351,13 @@ class Converter:
 
     def process_with_manager(
         self, session: Session, resource: Resource, 
-        prompt_text: str, added_tag_ids: set, manager
+        prompt_text: str, added_tag_ids: set, manager, manager_type=None
     ) -> int:
         converted_count = 0
         prompt_text = prompt_text.lower()
         
         current_tags = {tag.tag for tag in resource.tags}
+        instrument_tag_added = False  # 악기 태그가 이미 추가되었는지 추적
         
         for standard_name, item in manager.items.items():
             for alias in item.aliases:
@@ -371,6 +374,21 @@ class Converter:
                         added_tag_ids.add(tag.id)
                         converted_count += 1
                         print(f"태그 추가됨: {standard_name}")
+                        
+                        # 악기 매니저일 경우 인스트러먼트 태그 추가
+                        if manager_type == "악기" and not instrument_tag_added:
+                            instrument_tag_id = 5982
+                            
+                            # 이미 인스트러먼트 태그가 있는지 확인
+                            if instrument_tag_id not in added_tag_ids:
+                                instrument_tag = session.query(ColorCodeTags).filter(ColorCodeTags.id == instrument_tag_id).first()
+                                if instrument_tag:
+                                    resource.tags.append(instrument_tag)
+                                    added_tag_ids.add(instrument_tag_id)
+                                    print(f"인스트러먼트 자동 태그 추가됨 (ID: {instrument_tag_id})")
+                                    instrument_tag_added = True
+                                    converted_count += 1
+                        
                         session.commit()
                     except Exception as e:
                         print(f"태그 처리 중 오류 발생: {str(e)}")

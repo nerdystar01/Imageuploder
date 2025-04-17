@@ -8,7 +8,7 @@ from typing import List, Tuple, Dict, Any
 from sqlalchemy import func
 
 # 로컬 모듈 임포트
-from manager import CharacterManager, OutfitManager, EventManager
+from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager
 from models import ColorCodeTags
 from session_utills import get_session, end_session
 
@@ -20,6 +20,7 @@ class PromptTagExtractor:
         self.character_manager = CharacterManager()
         self.outfit_manager = OutfitManager()
         self.event_manager = EventManager()
+        self.instrument_manager = InstrumentManager()
         self.session = session
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'  # 로라 태그 정규식
 
@@ -35,6 +36,7 @@ class PromptTagExtractor:
                 - characters: 캐릭터 태그 목록 [(별칭, 표준이름)]
                 - outfits: 의상 태그 목록 [(별칭, 표준이름)]
                 - events: 이벤트/배경 태그 목록 [(별칭, 표준이름)]
+                - instruments: 악기 태그 목록 [(별칭, 표준이름)]
                 - loras: 로라 태그 목록 [(로라이름, 가중치)]
                 - multiple: 여러 인물 감지 여부
                 - has_4ground9_character: 4GROUND9 캐릭터 포함 여부
@@ -44,6 +46,7 @@ class PromptTagExtractor:
                 'characters': [],
                 'outfits': [],
                 'events': [],
+                'instruments': [], # 악기 태그 추가
                 'loras': [],
                 'multiple': False,
                 'has_4ground9_character': False
@@ -56,6 +59,7 @@ class PromptTagExtractor:
             'characters': [],
             'outfits': [],
             'events': [],
+            'instruments': [], # 악기 태그 추가
             'loras': [],
             'multiple': False,
             'has_4ground9_character': False
@@ -81,6 +85,13 @@ class PromptTagExtractor:
             for alias in item.aliases:
                 if alias.lower() in lower_prompt:
                     result['events'].append((alias, standard_name))
+                    break
+        
+        # 악기 태그 추출 (새로 추가)
+        for standard_name, item in self.instrument_manager.items.items():
+            for alias in item.aliases:
+                if alias.lower() in lower_prompt:
+                    result['instruments'].append((alias, standard_name))
                     break
         
         # 로라 태그 추출
@@ -150,13 +161,14 @@ class PromptTagExtractor:
                 - characters: 캐릭터 태그 목록 [(별칭, 표준이름, 존재여부)]
                 - outfits: 의상 태그 목록 [(별칭, 표준이름, 존재여부)]
                 - events: 이벤트/배경 태그 목록 [(별칭, 표준이름, 존재여부)]
+                - instruments: 악기 태그 목록 [(별칭, 표준이름, 존재여부)]  # 이 부분 추가
                 - loras: 로라 태그 목록 [(로라이름, 가중치, 존재여부)]
         """
         if not self.session:
             # 세션이 없으면 모두 존재하지 않는 것으로 가정
             result = {}
             for key, tags in extracted_tags.items():
-                if key in ['characters', 'outfits', 'events']:
+                if key in ['characters', 'outfits', 'events', 'instruments']:  # instruments 추가
                     result[key] = [(alias, name, False) for alias, name in tags]
                 elif key == 'loras':
                     result[key] = [(name, weight, False) for name, weight in tags]
@@ -171,7 +183,7 @@ class PromptTagExtractor:
         
         try:
             # 각 카테고리별로 태그 존재 여부 확인
-            for category in ['characters', 'outfits', 'events']:
+            for category in ['characters', 'outfits', 'events', 'instruments']:  # instruments 추가
                 for alias, name in extracted_tags[category]:
                     tag = self.session.query(ColorCodeTags).filter(
                         func.lower(ColorCodeTags.tag) == name.lower()
@@ -231,6 +243,7 @@ def analyze_prompt(prompt_text: str, use_db: bool = False) -> Dict[str, Any]:
             'outfits': [],
             'events': [],
             'loras': [],
+            'instruments': [],
             'multiple': False,
             'has_4ground9_character': False,
             'error': str(e)
@@ -272,6 +285,7 @@ def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
     print_category("캐릭터 태그", extracted_tags.get('characters', []))
     print_category("의상 태그", extracted_tags.get('outfits', []))
     print_category("이벤트/배경 태그", extracted_tags.get('events', []))
+    print_category("악기 태그", extracted_tags.get('instruments', []))
     print_category("로라 태그", extracted_tags.get('loras', []))
     
     # 특수 태그 정보

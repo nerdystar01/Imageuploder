@@ -543,6 +543,38 @@ class OutfitManager(BaseManager):
             'weapon': BaseItem('weapon', ['weapon,']),
         }
 
+class InstrumentManager(BaseManager):
+    def __init__(self):
+        super().__init__()
+        self.items = {
+            # 악기 - 관악기
+            'Saxophone': BaseItem('Saxophone', ['saxophone,']),
+            'Euphonium': BaseItem('Euphonium', ['euphonium,']),
+            'Trombone': BaseItem('Trombone', ['trombone,']),
+            'Trumpet': BaseItem('Trumpet', ['trumpet,']),
+            'Tuba': BaseItem('Tuba', ['tuba,']),
+            'Bugle': BaseItem('Bugle', ['bugle,']),
+            'Flute': BaseItem('Flute', ['flute,']),
+            'Clarinet': BaseItem('Clarinet', ['clarinet,']),
+            'Harmonica': BaseItem('Harmonica', ['harmonica,']),
+            'Ocarina': BaseItem('Ocarina', ['ocarina,']),
+            'Recorder': BaseItem('Recorder', ['recorder,']),
+            
+            # 악기 - 현악기
+            'Viola (instrument)': BaseItem('Viola', ['viola (instrument),']),
+            'Violin': BaseItem('Violin', ['violin,']),
+            'Cello': BaseItem('Cello', ['cello,']),
+            'Banjo': BaseItem('Banjo', ['banjo,']),
+            'Harp': BaseItem('Harp', ['harp,']),
+            'Lyre': BaseItem('Lyre', ['lyre,']),
+            'Guitar': BaseItem('Guitar', ['guitar,']),
+            
+            # 악기 - 건반악기
+            'Piano': BaseItem('Piano', ['piano,']),
+            'Organ': BaseItem('Organ', ['organ,']),
+            'Keyboard (instrument)': BaseItem('Keyboard', ['keyboard (instrument),']),
+        }
+
 class EventManager(BaseManager):
     def __init__(self):
         super().__init__()
