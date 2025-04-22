@@ -32,7 +32,7 @@ from models import (
     ColorCodeTags,
     SdModel
 )
-from manager import CharacterManager, OutfitManager, EventManager
+from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager
 
 from session_utills import get_session, end_session, check_connection, upload_to_bucket, upload_image_to_gcp_bucket
 
@@ -892,14 +892,17 @@ def create_tag_mapping() -> Dict[str, str]:
     character_manager = CharacterManager()
     outfit_manager = OutfitManager()
     event_manager = EventManager()
+    instrument_manager = InstrumentManager()
     
+
     tag_mapping = {}
     
     # 각 매니저의 items를 순회하면서 태그 매핑 생성
     managers = [
         ('character', character_manager),
         ('outfit', outfit_manager),
-        ('event', event_manager)
+        ('event', event_manager),
+        ('inst', instrument_manager)
     ]
     
     for manager_name, manager in managers:
