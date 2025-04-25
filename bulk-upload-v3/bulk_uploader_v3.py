@@ -325,6 +325,33 @@ class PromptParser:
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'
         self.lora_without_weight_regex = r'<lora:([^:>]+)>'
         self.added_tag_ids = set()
+        self.plave_manager = PlaveManager()
+
+    
+    def _check_plave_members(self, prompt_text: str) -> List[str]:
+        """
+        프롬프트 텍스트에서 플레이브 멤버 이름을 확인합니다.
+        
+        Args:
+            prompt_text: 분석할 프롬프트 텍스트
+            
+        Returns:
+            list: 감지된 플레이브 멤버 이름 목록
+        """
+        lower_prompt = prompt_text.lower()
+        detected_members = []
+        
+        # 각 플레이브 멤버의 별칭 확인
+        for member_name, item in self.plave_manager.items.items():
+            for alias in item.aliases:
+                # 콤마 제거하여 비교
+                clean_alias = alias.rstrip(',')
+                if clean_alias.lower() in lower_prompt:
+                    detected_members.append(member_name)
+                    print(f"플레이브 멤버 발견: {member_name} (별칭: {clean_alias})")
+                    break
+        
+        return detected_members
 
     def _get_or_create_tag(self, session: Session, tag_name: str) -> ColorCodeTags:
         """
@@ -396,6 +423,21 @@ class PromptParser:
             lora_count = self._process_lora_tags(session, resource, prompt_text, added_tag_ids)
             print(f"Lora 태그 처리 결과: {lora_count}개")
             converted_count += lora_count
+            
+            # 플레이브 멤버 체크 및 PLAVE 태그 추가
+            plave_members = self._check_plave_members(prompt_text)
+            if plave_members:
+                # PLAVE 태그 찾기 또는 생성
+                plave_tag = self._get_or_create_tag(session, "PLAVE")
+                
+                # 이미 추가된 태그가 아니면 추가
+                if plave_tag and plave_tag.id not in added_tag_ids:
+                    print(f"PLAVE 태그 추가 (발견된 멤버: {', '.join(plave_members)})")
+                    resource.tags.append(plave_tag)
+                    added_tag_ids.add(plave_tag.id)
+                    converted_count += 1
+                else:
+                    print("PLAVE 태그가 이미 추가되어 있습니다.")
             
             print(f"리소스 {resource.id}에 총 {converted_count}개 태그 추가됨")
             session.flush()

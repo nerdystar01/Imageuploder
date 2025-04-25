@@ -40,8 +40,10 @@ class PromptTagExtractor:
                 - events: 이벤트/배경 태그 목록 [(별칭, 표준이름)]
                 - instruments: 악기 태그 목록 [(별칭, 표준이름)]
                 - loras: 로라 태그 목록 [(로라이름, 가중치)]
+                - plaves: 플레이브 태그 목록 [(별칭, 표준이름)]
                 - multiple: 여러 인물 감지 여부
                 - has_4ground9_character: 4GROUND9 캐릭터 포함 여부
+                - has_plave_character: 플레이브 캐릭터 포함 여부
         """
         if not prompt_text:
             return {
@@ -52,7 +54,8 @@ class PromptTagExtractor:
                 'loras': [],
                 'plaves': [],
                 'multiple': False,
-                'has_4ground9_character': False
+                'has_4ground9_character': False,
+                'has_plave_character': False
             }
             
         # 대소문자 구분 없이 검색하기 위해 소문자 변환
@@ -66,7 +69,8 @@ class PromptTagExtractor:
             'loras': [],
             'plaves': [],
             'multiple': False,
-            'has_4ground9_character': False
+            'has_4ground9_character': False,
+            'has_plave_character': False
         }
         
         # 캐릭터 태그 추출
@@ -91,17 +95,20 @@ class PromptTagExtractor:
                     result['events'].append((alias, standard_name))
                     break
         
-        # 악기 태그 추출 (새로 추가)
+        # 악기 태그 추출
         for standard_name, item in self.instrument_manager.items.items():
             for alias in item.aliases:
                 if alias.lower() in lower_prompt:
                     result['instruments'].append((alias, standard_name))
                     break
 
+        # 플레이브 태그 추출
         for standard_name, item in self.plave_manager.items.items():
             for alias in item.aliases:
-                if alias.lower() in lower_prompt:
-                    result['plaves'].append((alias, standard_name))
+                clean_alias = alias.rstrip(',')  # 콤마 제거
+                if clean_alias.lower() in lower_prompt:
+                    result['plaves'].append((clean_alias, standard_name))
+                    result['has_plave_character'] = True  # 플레이브 캐릭터 포함 여부 설정
                     break
         
         # 로라 태그 추출
@@ -115,7 +122,6 @@ class PromptTagExtractor:
         # 가중치 없는 태그는 단일 항목으로 반환되므로 기본 가중치(예: "1.0")를 추가
         for model_name in lora_matches2:
             result['loras'].append((model_name, "1.0"))
-        
         
         # Multiple 태그 검사
         result['multiple'] = self._check_multiple_characters(lower_prompt)
@@ -186,7 +192,7 @@ class PromptTagExtractor:
             # 세션이 없으면 모두 존재하지 않는 것으로 가정
             result = {}
             for key, tags in extracted_tags.items():
-                if key in ['characters', 'outfits', 'events', 'instruments']:  # instruments 추가
+                if key in ['characters', 'outfits', 'events', 'instruments','plaves']:  # instruments 추가
                     result[key] = [(alias, name, False) for alias, name in tags]
                 elif key == 'loras':
                     result[key] = [(name, weight, False) for name, weight in tags]
@@ -198,6 +204,7 @@ class PromptTagExtractor:
         result = {k: [] for k in extracted_tags.keys()}
         result['multiple'] = extracted_tags['multiple']
         result['has_4ground9_character'] = extracted_tags['has_4ground9_character']
+        result['has_plave_character'] = extracted_tags['has_plave_character'] 
         
         try:
             # 각 카테고리별로 태그 존재 여부 확인
@@ -265,6 +272,7 @@ def analyze_prompt(prompt_text: str, use_db: bool = False) -> Dict[str, Any]:
             'instruments': [],
             'multiple': False,
             'has_4ground9_character': False,
+            'has_plave_character': False,  # 추가: 플레이브 캐릭터 포함 여부
             'error': str(e)
         }
     finally:
@@ -305,8 +313,8 @@ def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
     print_category("의상 태그", extracted_tags.get('outfits', []))
     print_category("이벤트/배경 태그", extracted_tags.get('events', []))
     print_category("악기 태그", extracted_tags.get('instruments', []))
+    print_category("플레이브 태그", extracted_tags.get('plaves', []))  # 수정: 플레이브 태그 카테고리명 수정
     print_category("로라 태그", extracted_tags.get('loras', []))
-    print_category("로라 태그", extracted_tags.get('plaves', []))
     
     # 특수 태그 정보
     print("\n특수 태그:")
@@ -314,6 +322,8 @@ def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
         print("- Multiple 태그 추가 예정 (여러 인물 감지됨)")
     if extracted_tags.get('has_4ground9_character', False):
         print("- 4GROUND9 태그 추가 예정 (캐릭터 감지됨)")
+    if extracted_tags.get('has_plave_character', False):
+        print("- PLAVE 태그 추가 예정 (플레이브 캐릭터 감지됨)")
     
     print("\n참고: [✓] 이미 존재하는 태그, [✗] 새로 생성될 태그")
     print("==========================")

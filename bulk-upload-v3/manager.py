@@ -462,7 +462,7 @@ class PlaveManager(BaseManager):
             'yejun': BaseItem('Yejun', ['yejun,']),
             'Noa': BaseItem('Noa', ['noa,']),
             'Eunho': BaseItem('Eunho', ['eunho,']),
-            'Plave' : BaseItem('Plave', ['plave,']),
+            # 'Plave' : BaseItem('Plave', ['plave,']),
         }
 
 
