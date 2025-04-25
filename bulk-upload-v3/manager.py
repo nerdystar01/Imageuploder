@@ -459,7 +459,7 @@ class PlaveManager(BaseManager):
             # 플레이브 캐릭터
             'Bambi': BaseItem('Bambi', ['bambi,']),
             'Hamin': BaseItem('Hamin', ['hamin,']),
-            'yejun': BaseItem('Yejun', ['yejun,']),
+            'Yejun': BaseItem('Yejun', ['yejun,']),
             'Noa': BaseItem('Noa', ['noa,']),
             'Eunho': BaseItem('Eunho', ['eunho,']),
             # 'Plave' : BaseItem('Plave', ['plave,']),
