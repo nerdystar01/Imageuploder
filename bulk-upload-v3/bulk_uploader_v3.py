@@ -32,7 +32,7 @@ from models import (
     ColorCodeTags,
     SdModel
 )
-from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager
+from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager, PlaveManager
 
 from session_utills import get_session, end_session, check_connection, upload_to_bucket, upload_image_to_gcp_bucket
 
@@ -323,6 +323,7 @@ class PromptParser:
         self.tag_mapping = create_tag_mapping()
         # Lora 태그를 찾기 위한 정규식 패턴
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'
+        self.lora_without_weight_regex = r'<lora:([^:>]+)>'
         self.added_tag_ids = set()
 
     def _get_or_create_tag(self, session: Session, tag_name: str) -> ColorCodeTags:
@@ -349,9 +350,22 @@ class PromptParser:
     def _extract_lora_tags(self, prompt_text: str) -> List[Tuple[str, float]]:
         """
         프롬프트 텍스트에서 모든 Lora 태그와 가중치를 추출합니다.
+        가중치가 없는 Lora 태그는 기본 가중치 1.0으로 설정합니다.
         """
-        matches = re.findall(self.lora_regex, prompt_text)
-        return [(model, float(weight)) for model, weight in matches]
+        # 가중치가 있는 Lora 태그 추출
+        weighted_matches = re.findall(self.lora_regex, prompt_text)
+        weighted_loras = [(model, float(weight)) for model, weight in weighted_matches]
+        
+        # 가중치가 없는 Lora 태그 추출 (이미 가중치가 있는 태그와 중복되지 않도록 처리)
+        # 먼저 가중치 있는 태그 형식을 제거
+        remaining_text = re.sub(self.lora_regex, '', prompt_text)
+        unweighted_matches = re.findall(self.lora_without_weight_regex, remaining_text)
+        
+        # 가중치 없는 태그에는 기본값 1.0 적용
+        unweighted_loras = [(model, 1.0) for model in unweighted_matches]
+        
+        # 모든 Lora 태그 결합
+        return weighted_loras + unweighted_loras
     
     @retry_on_connection_error()
     def _process_single_resource(self, session: Session, resource: Resource, prompt_text: str) -> int:
@@ -893,7 +907,7 @@ def create_tag_mapping() -> Dict[str, str]:
     outfit_manager = OutfitManager()
     event_manager = EventManager()
     instrument_manager = InstrumentManager()
-    
+    plave_manager = PlaveManager()
 
     tag_mapping = {}
     
@@ -902,7 +916,8 @@ def create_tag_mapping() -> Dict[str, str]:
         ('character', character_manager),
         ('outfit', outfit_manager),
         ('event', event_manager),
-        ('inst', instrument_manager)
+        ('inst', instrument_manager),
+        ('plave', plave_manager)
     ]
     
     for manager_name, manager in managers:

@@ -452,6 +452,20 @@ class CharacterManager(BaseManager):
             'Blacky': BaseItem('Blacky', ['blacky,', 'nsblacky,']),
         }
 
+class PlaveManager(BaseManager):
+     def __init__(self):
+        super().__init__()
+        self.items = {
+            # 플레이브 캐릭터
+            'Bambi': BaseItem('Bambi', ['bambi,']),
+            'Hamin': BaseItem('Hamin', ['hamin,']),
+            'yejun': BaseItem('Yejun', ['yejun,']),
+            'Noa': BaseItem('Noa', ['noa,']),
+            'Eunho': BaseItem('Eunho', ['eunho,']),
+            'Plave' : BaseItem('Plave', ['plave,']),
+        }
+
+
 class OutfitManager(BaseManager):
     def __init__(self):
         super().__init__()

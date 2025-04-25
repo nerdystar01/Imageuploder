@@ -8,7 +8,7 @@ from typing import List, Tuple, Dict, Any
 from sqlalchemy import func
 
 # 로컬 모듈 임포트
-from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager
+from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager, PlaveManager
 from models import ColorCodeTags
 from session_utills import get_session, end_session
 
@@ -21,8 +21,10 @@ class PromptTagExtractor:
         self.outfit_manager = OutfitManager()
         self.event_manager = EventManager()
         self.instrument_manager = InstrumentManager()
+        self.plave_manager = PlaveManager()
         self.session = session
         self.lora_regex = r'<lora:([^:]+):([0-9.]+)>'  # 로라 태그 정규식
+        self.lora_without_weight_regex = r'<lora:([^:>]+)>' # 로러 태그 정규식 가중치 X
 
     def extract_tags_from_prompt(self, prompt_text: str) -> Dict[str, List[Tuple[str, str]]]:
         """
@@ -48,6 +50,7 @@ class PromptTagExtractor:
                 'events': [],
                 'instruments': [], # 악기 태그 추가
                 'loras': [],
+                'plaves': [],
                 'multiple': False,
                 'has_4ground9_character': False
             }
@@ -61,6 +64,7 @@ class PromptTagExtractor:
             'events': [],
             'instruments': [], # 악기 태그 추가
             'loras': [],
+            'plaves': [],
             'multiple': False,
             'has_4ground9_character': False
         }
@@ -93,11 +97,25 @@ class PromptTagExtractor:
                 if alias.lower() in lower_prompt:
                     result['instruments'].append((alias, standard_name))
                     break
+
+        for standard_name, item in self.plave_manager.items.items():
+            for alias in item.aliases:
+                if alias.lower() in lower_prompt:
+                    result['plaves'].append((alias, standard_name))
+                    break
         
         # 로라 태그 추출
         lora_matches = re.findall(self.lora_regex, prompt_text)
         for model_name, weight in lora_matches:
             result['loras'].append((model_name, weight))
+
+        remaining_text = re.sub(self.lora_regex, '', prompt_text)
+        lora_matches2 = re.findall(self.lora_without_weight_regex, remaining_text)
+        
+        # 가중치 없는 태그는 단일 항목으로 반환되므로 기본 가중치(예: "1.0")를 추가
+        for model_name in lora_matches2:
+            result['loras'].append((model_name, "1.0"))
+        
         
         # Multiple 태그 검사
         result['multiple'] = self._check_multiple_characters(lower_prompt)
@@ -183,7 +201,7 @@ class PromptTagExtractor:
         
         try:
             # 각 카테고리별로 태그 존재 여부 확인
-            for category in ['characters', 'outfits', 'events', 'instruments']:  # instruments 추가
+            for category in ['characters', 'outfits', 'events', 'instruments', 'plaves']:  # instruments 추가
                 for alias, name in extracted_tags[category]:
                     tag = self.session.query(ColorCodeTags).filter(
                         func.lower(ColorCodeTags.tag) == name.lower()
@@ -243,6 +261,7 @@ def analyze_prompt(prompt_text: str, use_db: bool = False) -> Dict[str, Any]:
             'outfits': [],
             'events': [],
             'loras': [],
+            'plaves': [],
             'instruments': [],
             'multiple': False,
             'has_4ground9_character': False,
@@ -287,6 +306,7 @@ def display_extracted_tags(extracted_tags: Dict[str, Any]) -> None:
     print_category("이벤트/배경 태그", extracted_tags.get('events', []))
     print_category("악기 태그", extracted_tags.get('instruments', []))
     print_category("로라 태그", extracted_tags.get('loras', []))
+    print_category("로라 태그", extracted_tags.get('plaves', []))
     
     # 특수 태그 정보
     print("\n특수 태그:")
