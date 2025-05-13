@@ -452,6 +452,7 @@ class CharacterManager(BaseManager):
             'Zachary': BaseItem('Zachary', ['nszachary,']),
             'Blacky': BaseItem('Blacky', ['blacky,', 'nsblacky,']),
             'Yue': BaseItem('Yue', ['nsyue,', 'yue,']),
+            'Dane': BaseItem('Dane', ['nsdane,', 'dane,']),
         }   
 
 class PlaveManager(BaseManager):
