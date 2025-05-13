@@ -226,113 +226,114 @@ class CharacterManager(BaseManager):
         super().__init__()
         self.items = {
             # 앤드류
-            'Andrew': BaseItem('Andrew', ['andrew,']),
+            'Andrew': BaseItem('Andrew', ['andrew,', 'nsandrew,']),
             # 아카네
-            'Akane': BaseItem('Akane', ['Akane,', 'akane,']),
+            'Akane': BaseItem('Akane', ['Akane,', 'akane,', 'nsakane,']),
             # 비트
-            'Beat': BaseItem('Beat', ['4g9_beat,', 'beat,']),
+            'Beat': BaseItem('Beat', ['4g9_beat,', 'beat,', 'nsbeat,']),
             # 블레이크
-            'Blake': BaseItem('Blake', ['blake,']),
+            'Blake': BaseItem('Blake', ['blake,', 'nsblake,']),
             # 셀막
-            'Celmech': BaseItem('Celmech', ['celmech,']),
+            'Celmech': BaseItem('Celmech', ['celmech,', 'nscelmech,', 'celmek,', 'nscelmek,']),
             # 그리스
-            'Gris': BaseItem('Gris', ['gris,']),
+            'Gris': BaseItem('Gris', ['gris,', 'nsgris,']),
             # 하이도
-            'Hyde': BaseItem('Hyde', ['hyde,', 'hydo,']),
+            'Hyde': BaseItem('Hyde', ['hyde,', 'hydo,', 'nshyde,']),
             # 존쿠퍼
-            'JohnCooper': BaseItem('JohnCooper', ['4g9_cooper,', 'cooper,', 'johncooper']),
+            'JohnCooper': BaseItem('JohnCooper', ['4g9_cooper,', 'cooper,', 'johncooper', 'nsjohncooper,']),
             # 문스톤
-            'Moonstone': BaseItem('Moonstone', ['moonstone,']),
+            'Moonstone': BaseItem('Moonstone', ['moonstone,', 'nsmoonstone,']),
             # 무로
-            'Muro': BaseItem('Muro', ['muro,', 'muro_mech,']),
+            'Muro': BaseItem('Muro', ['muro,', 'muro_mech,', 'nsmuro,']),
             # 오스카
-            'Oscar': BaseItem('Oscar', ['oscar,', 'singer_male,']),
+            'Oscar': BaseItem('Oscar', ['oscar,', 'singer_male,', 'nsoscar,']),
             # P-5
-            'P-5': BaseItem('P-5', ['P_5.D,']),
+            'P-5': BaseItem('P-5', ['P_5.D,', 'nsp-5,']),
             # 라비
-            'Ravi': BaseItem('Ravi', ['ravi,']),
+            'Ravi': BaseItem('Ravi', ['ravi,', 'nsravi,']),
             # RV
-            'Rv': BaseItem('Rv', ['rv,']),
+            'Rv': BaseItem('Rv', ['rv,', 'nsrv,']),
             # 슬레셔
-            'Slasher': BaseItem('Slasher', ['slasher,']),
+            'Slasher': BaseItem('Slasher', ['slasher,', 'nsslasher,']),
             # 유고
-            'UGo': BaseItem('UGo', ['yugo,']),
+            'UGo': BaseItem('UGo', ['yugo,', 'nsugo,']),
             # 솔
-            'Soll': BaseItem('Soll', ['sol,', 'soll,']),
+            'Soll': BaseItem('Soll', ['sol,', 'soll,', 'nssoll,']),
             # 베르도르만
-            'Verdorman': BaseItem('Verdorman', ['verdoman,', 'verdorman.']),
+            'Verdorman': BaseItem('Verdorman', ['verdoman,', 'verdorman.', 'nsverdorman,']),
             # 엔젤
-            'Engel': BaseItem('Engel', ['engel,']),
+            'Engel': BaseItem('Engel', ['engel,', 'nsengel,']),
             # 하니
-            'Hani': BaseItem('Hani', ['4g9_honey,', 'sniper_girl,']),
+            'Hani': BaseItem('Hani', ['4g9_honey,', 'sniper_girl,', 'nshani,']),
             # 조아
-            'Joa': BaseItem('Joa', ['joa,', '4g9_joa,']),
+            'Joa': BaseItem('Joa', ['joa,', '4g9_joa,', 'nsjoa,']),
             # 로라
             'Lora': BaseItem('Lora', ['nslora,', '4g9_lora,']),
             # 마더
-            'Mother': BaseItem('Mother', ['mother,', '4g9_mother,']),
+            'Mother': BaseItem('Mother', ['mother,', '4g9_mother,', 'nsmother,']),
             # 프리
-            'Pre': BaseItem('Pre', ['pre,', '4g9_pre,']),
+            'Pre': BaseItem('Pre', ['pre,', '4g9_pre,', 'nspre,']),
             # 스칼렛
-            'Scarlett': BaseItem('Scarlett', ['4g9_scarlet,', '4g9_scarlett,']),
+            'Scarlett': BaseItem('Scarlett', ['4g9_scarlet,', '4g9_scarlett,', 'nsscarlett,', 'nsscarlet,']),
             # ZP
-            'ZP': BaseItem('ZP', ['4g9_zp,', 'zp,', 'ZP']),
+            'ZP': BaseItem('ZP', ['4g9_zp,', 'zp,', 'ZP', 'nszp,']),
             # 이고르
-            'Agro': BaseItem('Agro', ['agro,', 'aguro,']),
+            'Agro': BaseItem('Agro', ['agro,', 'aguro,', 'nsagro,']),
             # 백사
-            'Baeksa': BaseItem('Baeksa', ['baeksa,', 'beaksa,']),
+            'Baeksa': BaseItem('Baeksa', ['baeksa,', 'beaksa,', 'nsbaeksa,']),
             # 블랑
-            'Blanc': BaseItem('Blanc', ['blanc,']),
+            'Blanc': BaseItem('Blanc', ['blanc,', 'nsblanc,']),
             # 채티
-            'Chati': BaseItem('Chati', ['chati,']),
+            'Chati': BaseItem('Chati', ['chati,', 'nschati,']),
             # 실험체 01
-            'Experiment01': BaseItem('Experiment01', ['experiment01,']),
+            # 'Experiment01': BaseItem('Experiment01', ['experiment01,', 'nsexperiment01,']),
+            'Greta' : BaseItem('Greta', ['experiment01,', 'nsexperiment01,', 'nsgreta,', ]),
             # 실험체 02
-            'Experiment02': BaseItem('Experiment02', ['experiment02,']),
+            'Experiment02': BaseItem('Experiment02', ['experiment02,', 'nsexperiment02,', 'nst-0']),
             # 사장
-            'Employee': BaseItem('Employee', ['employee,']),
+            'Employee': BaseItem('Employee', ['employee,', 'nsemployee,']),
             # 하이든
-            'Hayden': BaseItem('Hayden', ['hayden,', 'hikey_female,']),
+            'Hayden': BaseItem('Hayden', ['hayden,', 'hikey_female,', 'nshayden,']),
             # 헤이즈
-            'Heize': BaseItem('Heize', ['heize,', 'singer,', 'singer_female,']),
+            'Heize': BaseItem('Heize', ['heize,', 'singer,', 'singer_female,', 'nsheize,']),
             # 하이키
-            'Hyki': BaseItem('Hyki', ['hikey,', 'hyki,']),
+            'Hyki': BaseItem('Hyki', ['hikey,', 'hyki,', 'nshyki,']),
             # 아이리
-            'Irey': BaseItem('Irey', ['irie,']),
+            'Irey': BaseItem('Irey', ['irie,', 'nsirey,']),
             # 우편배달소녀
-            'Lettergirl': BaseItem('Lettergirl', ['lettergirl,']),
+            'Lettergirl': BaseItem('Lettergirl', ['lettergirl,', 'nslettergirl,']),
             # 마리
-            'Mari': BaseItem('Mari', ['mari,']),
+            'Mari': BaseItem('Mari', ['mari,', 'nsmari,']),
             # 밀터
-            'Milter': BaseItem('Milter', ['milter,', 'milter_female,']),
+            'Milter': BaseItem('Milter', ['milter,', 'milter_female,', 'nsmilter,']),
             # 나비걸
-            'Navy_girl': BaseItem('Navy_girl', ['navy_girl,']),
+            'Navy_girl': BaseItem('Navy_girl', ['navy_girl,', 'nsnavy_girl,']),
             # 니노
-            'Nino': BaseItem('Nino', ['nino,']),
+            'Nino': BaseItem('Nino', ['nino,', 'nsnino,']),
             # 노아
-            'Noah': BaseItem('Noah', ['noah,']),
+            'Noah': BaseItem('Noah', ['noah,', 'nsnoah,']),
             # 페르사
-            'Persa': BaseItem('Persa', ['persa,', 'fersa,']),
+            'Persa': BaseItem('Persa', ['persa,', 'fersa,', 'nspersa,']),
             # 파더
-            'Father': BaseItem('Father', ['father,']),
+            'Father': BaseItem('Father', ['father,', 'nsfather,']),
             # 렘
-            'Rem': BaseItem('Rem', ['rem,']),
+            'Rem': BaseItem('Rem', ['rem,', 'nsrem,']),
             # 린메이
-            'LinMei': BaseItem('LinMei', ['rinmei,', 'linmei,']),
+            'LinMei': BaseItem('LinMei', ['rinmei,', 'linmei,', 'nslinmei,']),
             # 린샤오
-            'LinXiao': BaseItem('LinXiao', ['rinshao,', 'rinshao_female,', 'linxiao,']),
+            'LinXiao': BaseItem('LinXiao', ['rinshao,', 'rinshao_female,', 'linxiao,', 'nslinxiao,']),
             # 루아이
-            'RU-i': BaseItem('RU-i', ['ru-i,']),
+            'RU-i': BaseItem('RU-i', ['ru-i,', 'nsru-i,']),
             # 산토스
-            'Santos': BaseItem('Santos', ['santos,', 'santos_female,']),
+            'Santos': BaseItem('Santos', ['santos,', 'santos_female,', 'nssantos,']),
             # 시미즈
-            'Shimizu': BaseItem('Shimizu', ['shimizu,']),
+            'Shimizu': BaseItem('Shimizu', ['shimizu,', 'nsshimizu,']),
             # 단비
-            'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,']),
+            'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,', 'nsdanbi,']),
             # 드와이트
-            'Dwight': BaseItem('Dwight', ['dwight,', ]),
+            'Dwight': BaseItem('Dwight', ['dwight,', 'nsdwight,']),
             # Ohm
-            'Ohm': BaseItem('Ohm', ['ohm,', ]),
+            'Ohm': BaseItem('Ohm', ['ohm,', 'nsohm,']),
             # Spitz
             'Spitz': BaseItem('Spitz', ['spitz,', 'nsspitz,']),
             # Campo
@@ -392,9 +393,9 @@ class CharacterManager(BaseManager):
             # NPC Minibit
             'Minibit': BaseItem('Minibit', ['nsminibit,']),
             # NPC MissPark
-            'MissPark': BaseItem('MissPark', ['nsmisspark,']),
+            'MissPark': BaseItem('MissPark', ['nsmisspark,', 'nsmisspark2,']),
             # NPC MissPark2
-            'MissPark2': BaseItem('MissPark2', ['nsmisspark2,']),
+            # 'MissPark2': BaseItem('MissPark2', ['nsmisspark2,']),
             # NPC Muro
             'Muro': BaseItem('Muro', ['nsmuro,']),
             # NPC Mystic
@@ -432,9 +433,9 @@ class CharacterManager(BaseManager):
             # NPC Slammer
             'Slammer': BaseItem('Slammer', ['nsslammer,']),
             # NPC T8
-            'T8': BaseItem('T8', ['nst8,']),
+            'T8': BaseItem('T8', ['nst8,', 'nst-8,']),
             # NPC T9
-            'T9': BaseItem('T9', ['nst9,']),
+            'T9': BaseItem('T9', ['nst9,', 'nst-9,']),
             # NPC Takeru
             'Takeru': BaseItem('Takeru', ['nstakeru,']),
             # NPC Tatamoo
@@ -450,7 +451,8 @@ class CharacterManager(BaseManager):
             # NPC Zachary
             'Zachary': BaseItem('Zachary', ['nszachary,']),
             'Blacky': BaseItem('Blacky', ['blacky,', 'nsblacky,']),
-        }
+            'Yue': BaseItem('Yue', ['nsyue,', 'yue,']),
+        }   
 
 class PlaveManager(BaseManager):
      def __init__(self):

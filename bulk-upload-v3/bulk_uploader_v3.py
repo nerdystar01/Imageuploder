@@ -30,7 +30,8 @@ from models import (
     Resource,
     User,
     ColorCodeTags,
-    SdModel
+    SdModel,
+    Project
 )
 from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager, PlaveManager
 
@@ -492,13 +493,53 @@ class PromptParser:
 # ------------------------------
 #  New Resource
 # ------------------------------
+# class CreateResource:
+#     def __init__(self):
+#         pass
+
+#     def create_resource(self, user_id: int, original_image: Image.Image, 
+#                     image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
+#                     session: Session) -> Resource:
+#         """Create a new resource with uploaded images
+        
+#         Args:
+#             user_id: User ID for the resource
+#             original_image: Original PIL image
+#             image_128: Thumbnail image (128px)
+#             image_192: Thumbnail image (192px)
+#             image_512: Thumbnail image (512px)
+#             session: Database session
+            
+#         Returns:
+#             Resource: Created resource object
+#         """
+#         try:
+#             # Create new resource
+#             new_resource = Resource(user_id=user_id, challenge_points = 0)
+#             session.add(new_resource)
+#             session.flush()  # Get the ID without committing
+            
+#             # Upload images
+#             try:
+#                 self._upload_images(new_resource, original_image, image_128, image_192, image_512)
+#                 session.commit()
+#                 return new_resource
+#             except Exception as e:
+#                 session.rollback()
+#                 logging.error(f"Failed to upload images: {str(e)}")
+#                 raise
+
+#         except Exception as e:
+#             session.rollback()
+#             logging.error(f"Failed to create resource: {str(e)}")
+#             raise
 class CreateResource:
     def __init__(self):
         pass
 
     def create_resource(self, user_id: int, original_image: Image.Image, 
                     image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
-                    session: Session) -> Resource:
+                    session: Session, project_id: int = None) -> Resource:
         """Create a new resource with uploaded images
         
         Args:
@@ -508,13 +549,19 @@ class CreateResource:
             image_192: Thumbnail image (192px)
             image_512: Thumbnail image (512px)
             session: Database session
+            project_id: Project ID to associate with the resource (optional)
             
         Returns:
             Resource: Created resource object
         """
         try:
             # Create new resource
-            new_resource = Resource(user_id=user_id, challenge_points = 0)
+            new_resource = Resource(user_id=user_id, challenge_points=0)
+            
+            # 프로젝트 ID가 지정된 경우 리소스에 연결
+            if project_id is not None:
+                new_resource.project_id = project_id
+                
             session.add(new_resource)
             session.flush()  # Get the ID without committing
             
@@ -680,12 +727,35 @@ class CreateResource:
 #  Image Processing
 # ------------------------------
 class ImageProcessingSystem:
-    def __init__(self, user_id: int, default_tag_ids: List[int] = None):
+    def __init__(self, user_id: int, default_tag_ids: List[int] = None, project_id: int = None):
         self.png_util = PngUtill()
         self.prompt_parser = PromptParser()
         self.resource_creator = CreateResource()
         self.default_tag_ids = default_tag_ids or []
         self.user_id = user_id
+        self.project_id = project_id  # 프로젝트 ID 저장
+
+    def validate_project(self, session: Session) -> bool:
+        """
+        프로젝트 ID가 유효한지 확인합니다. (단순히 존재하는지만 확인)
+        
+        Args:
+            session: 데이터베이스 세션
+            
+        Returns:
+            bool: 프로젝트가 존재하면 True
+        """
+        if self.project_id is None:
+            return True  # 프로젝트 ID가 지정되지 않은 경우는 유효함
+            
+        # 프로젝트 존재 여부만 확인
+        project = session.query(Project).filter(Project.id == self.project_id).first()
+        
+        if not project:
+            logging.error(f"프로젝트 ID {self.project_id}가 존재하지 않습니다.")
+            return False
+                
+        return True
 
     def add_create_tags(self, resource: Resource, session: Session) -> None:
         try:
@@ -735,6 +805,10 @@ class ImageProcessingSystem:
             session.rollback()
         
     def process_single_image(self, image_path: str, session: Session):
+        # 프로젝트 유효성 검사 추가
+        if not self.validate_project(session):
+            raise ValueError(f"프로젝트 ID {self.project_id}가 유효하지 않습니다.")
+        
         try:
             original_image = Image.open(image_path)
             image_128 = self.png_util.scale_image_by_height(original_image, 128)
@@ -743,8 +817,10 @@ class ImageProcessingSystem:
             
             geninfo, params = self.png_util.geninfo_params(original_image)
             
+            # project_id 매개변수 추가
             resource = self.resource_creator.create_resource(
-                self.user_id, original_image, image_128, image_192, image_512, session
+                self.user_id, original_image, image_128, image_192, image_512, session,
+                project_id=self.project_id  # 프로젝트 ID 전달
             )
             
             if params:
@@ -758,14 +834,13 @@ class ImageProcessingSystem:
                         prompt_text=params["Prompt"]
                     )
 
-            
             self.add_create_tags(resource, session)
             self.add_default_tags(resource, session)
 
             resource.tag_ids = [tag.id for tag in resource.tags]
             session.commit()
 
-            return resource  # resource 객체 자체를 반환
+            return resource
 
         except Exception as e:
             logging.error(f"Error processing image {image_path}: {str(e)}")
@@ -846,6 +921,67 @@ class ImageProcessingSystem:
         finally:
             end_session(session, server)
 
+# def get_user_input():
+#     """Get interactive user input for processing parameters"""
+#     try:
+#         # Get user ID
+#         while True:
+#             try:
+#                 user_id = int(input("사용자 ID를 입력해주세요: ").strip())
+#                 break
+#             except ValueError:
+#                 print("올바른 숫자를 입력해주세요.")
+
+#         # Get base folder path
+#         while True:
+#             base_folder_path = input("작업할 폴더 경로를 입력해주세요: ").strip()
+#             if os.path.exists(base_folder_path):
+#                 break
+#             print("존재하지 않는 경로입니다. 다시 입력해주세요.")
+        
+#         # 자동으로 하위 폴더 감지 여부 확인
+#         process_subfolders = False
+#         while True:
+#             subfolder_option = input("하위 폴더들을 각각 처리하시겠습니까? (y/n): ").strip().lower()
+#             if subfolder_option in ['y', 'n']:
+#                 process_subfolders = (subfolder_option == 'y')
+#                 break
+#             print("'y' 또는 'n'을 입력해주세요.")
+            
+#         # 폴더를 캐릭터 폴더로 처리할지 기본값 설정
+#         default_character_folder = False
+#         if process_subfolders:
+#             while True:
+#                 auto_character = input("각 하위 폴더를 캐릭터 폴더로 처리할까요? (y/n): ").strip().lower()
+#                 if auto_character in ['y', 'n']:
+#                     default_character_folder = (auto_character == 'y')
+#                     break
+#                 print("'y' 또는 'n'을 입력해주세요.")
+
+#         # Get default tag IDs
+#         default_tag_ids = []
+#         while True:
+#             add_tags = input("모든 폴더에 공통으로 적용할 디폴트 태그를 추가하시겠습니까? (y/n): ").strip().lower()
+#             if add_tags in ['y', 'n']:
+#                 if add_tags == 'y':
+#                     while True:
+#                         tag_input = input("태그 ID를 입력해주세요 (완료시 엔터): ").strip()
+#                         if not tag_input:
+#                             break
+#                         try:
+#                             tag_id = int(tag_input)
+#                             default_tag_ids.append(tag_id)
+#                         except ValueError:
+#                             print("올바른 숫자를 입력해주세요.")
+#                 break
+#             print("'y' 또는 'n'을 입력해주세요.")
+
+#         return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder
+
+#     except KeyboardInterrupt:
+#         print("\n프로그램을 종료합니다.")
+#         sys.exit(0)
+
 def get_user_input():
     """Get interactive user input for processing parameters"""
     try:
@@ -856,6 +992,19 @@ def get_user_input():
                 break
             except ValueError:
                 print("올바른 숫자를 입력해주세요.")
+
+        # Get project ID (optional)
+        project_id = None
+        add_project = input("업로드할 리소스를 프로젝트에 연결하시겠습니까? (y/n): ").strip().lower()
+        if add_project == 'y':
+            while True:
+                try:
+                    project_id_input = input("프로젝트 ID를 입력해주세요: ").strip()
+                    if project_id_input:
+                        project_id = int(project_id_input)
+                    break
+                except ValueError:
+                    print("올바른 숫자를 입력해주세요.")
 
         # Get base folder path
         while True:
@@ -901,20 +1050,53 @@ def get_user_input():
                 break
             print("'y' 또는 'n'을 입력해주세요.")
 
-        return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder
+        return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id
 
     except KeyboardInterrupt:
         print("\n프로그램을 종료합니다.")
         sys.exit(0)
 
-def validate_inputs(session, user_id: int, tag_ids: list) -> Tuple[bool, str]:
+# def validate_inputs(session, user_id: int, tag_ids: list) -> Tuple[bool, str]:
+#     """
+#     입력받은 user_id와 tag_ids가 데이터베이스에 존재하는지 검증합니다.
+    
+#     Args:
+#         session: 데이터베이스 세션
+#         user_id (int): 검증할 사용자 ID
+#         tag_ids (list): 검증할 태그 ID 리스트
+        
+#     Returns:
+#         Tuple[bool, str]: (검증 성공 여부, 오류 메시지)
+#     """
+#     try:
+#         # 사용자 검증
+#         user = session.query(User).filter_by(id=user_id).first()
+#         if not user:
+#             return False, f"사용자 ID {user_id}가 존재하지 않습니다."
+
+#         # 태그 검증
+#         if tag_ids:
+#             existing_tags = session.query(ColorCodeTags).filter(ColorCodeTags.id.in_(tag_ids)).all()
+#             existing_tag_ids = {tag.id for tag in existing_tags}
+            
+#             missing_tags = set(tag_ids) - existing_tag_ids
+#             if missing_tags:
+#                 return False, f"다음 태그 ID가 존재하지 않습니다: {missing_tags}"
+
+#         return True, "검증 성공"
+
+#     except Exception as e:
+#         return False, f"데이터베이스 검증 중 오류 발생: {str(e)}"
+
+def validate_inputs(session, user_id: int, tag_ids: list, project_id: int = None) -> Tuple[bool, str]:
     """
-    입력받은 user_id와 tag_ids가 데이터베이스에 존재하는지 검증합니다.
+    입력받은 user_id, tag_ids, project_id가 데이터베이스에 존재하는지 검증합니다.
     
     Args:
         session: 데이터베이스 세션
         user_id (int): 검증할 사용자 ID
         tag_ids (list): 검증할 태그 ID 리스트
+        project_id (int, optional): 검증할 프로젝트 ID
         
     Returns:
         Tuple[bool, str]: (검증 성공 여부, 오류 메시지)
@@ -933,6 +1115,12 @@ def validate_inputs(session, user_id: int, tag_ids: list) -> Tuple[bool, str]:
             missing_tags = set(tag_ids) - existing_tag_ids
             if missing_tags:
                 return False, f"다음 태그 ID가 존재하지 않습니다: {missing_tags}"
+
+        # 프로젝트 검증 - 단순히 존재 여부만 확인
+        if project_id is not None:
+            project = session.query(Project).filter_by(id=project_id).first()
+            if not project:
+                return False, f"프로젝트 ID {project_id}가 존재하지 않습니다."
 
         return True, "검증 성공"
 
@@ -1085,7 +1273,66 @@ def get_subfolders(base_path):
     
     return subfolders
 
-def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder, created_tags_dict=None):
+# def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder, created_tags_dict=None):
+#     """
+#     단일 폴더를 처리하는 함수
+    
+#     Args:
+#         utils: 사용하지 않음 (이전 코드와의 호환성을 위해 유지)
+#         session: 데이터베이스 세션
+#         user_id: 사용자 ID
+#         folder_path: 처리할 폴더 경로
+#         default_tag_ids: 기본 태그 ID 목록
+#         is_character_folder: 캐릭터 폴더 여부
+#         created_tags_dict: 새로 생성된 태그를 저장할 딕셔너리 (선택 사항)
+#     """
+#     from sqlalchemy import func
+    
+#     # 현재 폴더의 태그 ID 목록 복사 (원본 목록 수정하지 않기 위해)
+#     folder_tag_ids = default_tag_ids.copy()
+    
+#     # 캐릭터 폴더 처리
+#     if is_character_folder:
+#         folder_name = os.path.basename(folder_path)
+#         print(f"\n폴더 '{folder_name}'을 캐릭터 폴더로 처리합니다.")
+        
+#         # 폴더 이름으로 태그 찾기 또는 생성 (이제 여러 태그 ID를 반환함)
+#         character_tag_ids = get_or_create_character_tag(session, folder_name, user_id, created_tags_dict)
+        
+#         if character_tag_ids:
+#             # 각 태그를 현재 폴더의 태그 목록에 추가
+#             added_count = 0
+#             for tag_id in character_tag_ids:
+#                 if tag_id not in folder_tag_ids:
+#                     folder_tag_ids.append(tag_id)
+#                     added_count += 1
+            
+#             if added_count > 0:
+#                 print(f"{added_count}개의 태그를 태그 목록에 추가했습니다.")
+#             else:
+#                 print("모든 태그가 이미 태그 목록에 존재합니다.")
+        
+#         # 변경 사항 확정
+#         session.commit()
+    
+#     # Initialize processor for this folder
+#     processor = ImageProcessingSystem(
+#         user_id=user_id,
+#         default_tag_ids=folder_tag_ids
+#     )
+    
+#     # Show processing information
+#     print("\n처리 정보:")
+#     print(f"폴더 경로: {folder_path}")
+#     print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
+#     print(f"적용될 태그 ID: {folder_tag_ids}")
+    
+#     # Process the folder
+#     processor.process_folder(folder_path)
+#     print(f"폴더 '{os.path.basename(folder_path)}' 처리가 완료되었습니다.")
+
+def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder, 
+                         created_tags_dict=None, project_id=None):
     """
     단일 폴더를 처리하는 함수
     
@@ -1097,6 +1344,7 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
         default_tag_ids: 기본 태그 ID 목록
         is_character_folder: 캐릭터 폴더 여부
         created_tags_dict: 새로 생성된 태그를 저장할 딕셔너리 (선택 사항)
+        project_id: 프로젝트 ID (선택 사항)
     """
     from sqlalchemy import func
     
@@ -1127,10 +1375,11 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
         # 변경 사항 확정
         session.commit()
     
-    # Initialize processor for this folder
+    # Initialize processor for this folder with project_id
     processor = ImageProcessingSystem(
         user_id=user_id,
-        default_tag_ids=folder_tag_ids
+        default_tag_ids=folder_tag_ids,
+        project_id=project_id  # 프로젝트 ID 추가
     )
     
     # Show processing information
@@ -1138,10 +1387,117 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
     print(f"폴더 경로: {folder_path}")
     print(f"폴더가 캐릭터 폴더로 처리됨: {'예' if is_character_folder else '아니오'}")
     print(f"적용될 태그 ID: {folder_tag_ids}")
+    if project_id:
+        print(f"연결할 프로젝트 ID: {project_id}")
     
     # Process the folder
     processor.process_folder(folder_path)
     print(f"폴더 '{os.path.basename(folder_path)}' 처리가 완료되었습니다.")
+
+# def main():
+#     # Configure logging
+#     logging.basicConfig(
+#         level=logging.INFO,
+#         format='%(asctime)s - %(levelname)s - %(message)s'
+#     )
+    
+#     try:
+#         tag_mapping = create_tag_mapping()
+        
+#         # 매핑 결과 출력
+#         print(f"총 {len(tag_mapping)}개의 태그 매핑이 생성되었습니다.")
+        
+#         # 파일로 저장
+#         save_tag_mapping(tag_mapping)
+
+#         # Get user input with enhanced options
+#         user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder = get_user_input()
+        
+#         # 데이터베이스 연결
+#         session, server = get_session()
+        
+#         try:
+#             # sqlalchemy func 가져오기
+#             from sqlalchemy import func
+            
+#             # 새로 생성된 태그를 저장할 딕셔너리
+#             created_tags = {}
+            
+#             # 입력값 검증
+#             is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
+#             if not is_valid:
+#                 print(f"\n오류: {error_message}")
+#                 return
+            
+#             # 폴더 목록 결정
+#             if process_subfolders:
+#                 # 하위 폴더 검색
+#                 folders = get_subfolders(base_folder_path)
+#                 if not folders:
+#                     print(f"'{base_folder_path}' 내에 이미지가 포함된 폴더가 없습니다.")
+#                     return
+                
+#                 print(f"\n{len(folders)}개의 폴더가 감지되었습니다:")
+#                 for i, folder in enumerate(folders, 1):
+#                     print(f"{i}. {folder}")
+#             else:
+#                 # 단일 폴더 처리
+#                 folders = [base_folder_path]
+            
+#             # 처리 시작 확인
+#             confirm = input("\n처리를 시작하시겠습니까? (y/n): ").strip().lower()
+#             if confirm != 'y':
+#                 print("프로그램을 종료합니다.")
+#                 return
+            
+#             # 각 폴더 처리
+#             for i, folder_path in enumerate(folders, 1):
+#                 print(f"\n[{i}/{len(folders)}] '{os.path.basename(folder_path)}' 폴더 처리 중...")
+                
+#                 if process_subfolders and len(folders) > 1:
+#                     # 여러 폴더 처리 모드에서는 각 폴더를 캐릭터 폴더로 처리하는지 여부 결정
+#                     is_character_folder = default_character_folder
+                    
+#                     # 기본값이 False인 경우에만 물어봄
+#                     if not default_character_folder:
+#                         character_prompt = input(f"'{os.path.basename(folder_path)}'를 캐릭터 폴더로 처리할까요? (y/n, 기본값=n): ").strip().lower()
+#                         is_character_folder = (character_prompt == 'y')
+#                 else:
+#                     # 단일 폴더 모드에서는 사용자에게 직접 물어봄
+#                     character_prompt = input(f"'{os.path.basename(folder_path)}'를 캐릭터 폴더로 처리할까요? (y/n): ").strip().lower()
+#                     is_character_folder = (character_prompt == 'y')
+                
+#                 # 현재 폴더 처리
+#                 process_single_folder(
+#                     utils=None,  # utils 매개변수는 더 이상 사용하지 않음
+#                     session=session,
+#                     user_id=user_id,
+#                     folder_path=folder_path,
+#                     default_tag_ids=default_tag_ids,
+#                     is_character_folder=is_character_folder,
+#                     created_tags_dict=created_tags
+#                 )
+            
+#             print("\n모든 폴더 처리가 완료되었습니다.")
+            
+#             # 새로 생성된 태그 정보 출력
+#             if created_tags:
+#                 print("\n=== 이번 작업에서 새로 생성된 태그 ===")
+#                 print("ID\t| 태그명")
+#                 print("-"*50)
+#                 for tag_id, tag_name in created_tags.items():
+#                     print(f"{tag_id}\t| {tag_name}")
+#             else:
+#                 print("\n이번 작업에서 새로 생성된 태그가 없습니다.")
+            
+#         finally:
+#             end_session(session, server)
+            
+#     except Exception as e:
+#         logging.error(f"처리 중 오류가 발생했습니다: {str(e)}")
+#         print("오류가 발생했습니다. 로그를 확인해주세요.")
+#     except KeyboardInterrupt:
+#         print("\n프로그램이 중단되었습니다.")
 
 def main():
     # Configure logging
@@ -1159,8 +1515,8 @@ def main():
         # 파일로 저장
         save_tag_mapping(tag_mapping)
 
-        # Get user input with enhanced options
-        user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder = get_user_input()
+        # Get user input with enhanced options (프로젝트 ID 추가)
+        user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id = get_user_input()
         
         # 데이터베이스 연결
         session, server = get_session()
@@ -1172,8 +1528,8 @@ def main():
             # 새로 생성된 태그를 저장할 딕셔너리
             created_tags = {}
             
-            # 입력값 검증
-            is_valid, error_message = validate_inputs(session, user_id, default_tag_ids)
+            # 입력값 검증 (프로젝트 ID 포함)
+            is_valid, error_message = validate_inputs(session, user_id, default_tag_ids, project_id)
             if not is_valid:
                 print(f"\n오류: {error_message}")
                 return
@@ -1216,15 +1572,16 @@ def main():
                     character_prompt = input(f"'{os.path.basename(folder_path)}'를 캐릭터 폴더로 처리할까요? (y/n): ").strip().lower()
                     is_character_folder = (character_prompt == 'y')
                 
-                # 현재 폴더 처리
+                # 현재 폴더 처리 (프로젝트 ID 추가)
                 process_single_folder(
-                    utils=None,  # utils 매개변수는 더 이상 사용하지 않음
+                    utils=None,
                     session=session,
                     user_id=user_id,
                     folder_path=folder_path,
                     default_tag_ids=default_tag_ids,
                     is_character_folder=is_character_folder,
-                    created_tags_dict=created_tags
+                    created_tags_dict=created_tags,
+                    project_id=project_id  # 프로젝트 ID 전달
                 )
             
             print("\n모든 폴더 처리가 완료되었습니다.")

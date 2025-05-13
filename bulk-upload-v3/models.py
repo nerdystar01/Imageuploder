@@ -4,8 +4,6 @@ import uuid
 from typing import List
 from urllib.parse import quote_plus
 
-
-
 # SQLAlchemy
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint, func, text
 from sqlalchemy.orm import relationship
@@ -63,6 +61,18 @@ resource_view_status = Table(
    Column('user_id', Integer, ForeignKey('user.id'))
 )
 
+# Project Members Association Table
+project_members = Table(
+   'project_member',
+   Base.metadata,
+   Column('id', Integer, primary_key=True),
+   Column('project_id', Integer, ForeignKey('project.id')),
+   Column('user_id', Integer, ForeignKey('user.id')),
+   Column('created_at', DateTime, default=lambda: datetime.now(seoul_tz)),
+   Column('updated_at', DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz)),
+   UniqueConstraint('project_id', 'user_id', name='unique_project_member')
+)
+
 # ------------------------------
 #  Models
 # ------------------------------
@@ -81,6 +91,10 @@ class User(Base):
    profile_image = Column(String, nullable=True)
    biography = Column(String(3000), nullable=True)
 
+   # Timestamps
+   created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
+   updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+
    # Relationships
    liked_resources = relationship("Resource", secondary=resource_likes, back_populates="likes")
    hidden_resources = relationship("Resource", secondary=resource_hidden_users, back_populates="hidden_by")
@@ -88,6 +102,10 @@ class User(Base):
    color_code_tags = relationship("ColorCodeTags", back_populates="user")
    placeholder_resources = relationship("Resource", secondary=resource_placeholder, back_populates="placeholder_users")
    viewed_resources = relationship("Resource", secondary=resource_view_status, back_populates="view_status")
+   
+   # Project relationships
+   owned_projects = relationship("Project", back_populates="owner", foreign_keys="Project.owner_id")
+   joined_projects = relationship("Project", secondary=project_members, back_populates="members")
 
 class ResourceTagV2(Base):
    __tablename__ = 'resource_tag_v2'
@@ -97,6 +115,28 @@ class ResourceTagV2(Base):
    tag_id = Column('tag_id', Integer, ForeignKey('color_code_tags.id'))
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+
+class Project(Base):
+   __tablename__ = 'project'
+   
+   id = Column(Integer, primary_key=True)
+   name = Column(String(20), nullable=False)
+   description = Column(Text, default="")
+   thumbnail_image = Column(String(200), nullable=True)
+   owner_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+   is_public = Column(Boolean, default=False)
+   
+   # Timestamps
+   created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
+   updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+   
+   # Relationships
+   owner = relationship("User", back_populates="owned_projects", foreign_keys=[owner_id])
+   members = relationship("User", secondary=project_members, back_populates="joined_projects")
+   resources = relationship("Resource", back_populates="project")
+   
+   def __repr__(self):
+      return f"<Project {self.name}>"
 
 class Resource(Base):
    __tablename__ = 'resource'
@@ -109,6 +149,8 @@ class Resource(Base):
    category_id = Column(Integer, nullable=True)
    folder_id = Column(Integer, nullable=True)
    reference_resource_id = Column(Integer, nullable=True)
+   # Add project relationship
+   project_id = Column(Integer, ForeignKey('project.id'), nullable=True)
 
    # Basic Info
    name = Column(String(1000), default="")
@@ -169,8 +211,6 @@ class Resource(Base):
    gpt_vision_score = Column(Integer, nullable=True)
    challenge_points = Column(Integer, default=0, server_default=text('0'), nullable=False)
 
-
-
    # Slack
    slack_timestamp = Column(Text, default="")
 
@@ -184,7 +224,7 @@ class Resource(Base):
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
 
-    # Relationships
+   # Relationships
    tags = relationship(
       "ColorCodeTags",
       secondary="resource_tag_v2",
@@ -195,9 +235,17 @@ class Resource(Base):
    hidden_by = relationship("User", secondary=resource_hidden_users, back_populates="hidden_resources")
    tabbed_by = relationship("User", secondary=resource_tabbed_users, back_populates="tabbed_resources")
    user = relationship("User", foreign_keys=[user_id])
-   #Add new relationships
+   project = relationship("Project", back_populates="resources")
    placeholder_users = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
+   
+   # Properties
+   @property
+   def is_mint(self):
+      """
+      block_hash 값이 있으면 True를 반환합니다.
+      """
+      return self.block_hash is not None and self.block_hash != ""
 
 class ColorCodeTags(Base):
    __tablename__ = 'color_code_tags'
@@ -212,7 +260,7 @@ class ColorCodeTags(Base):
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
 
-    # Relationships
+   # Relationships
    resources = relationship(
       "Resource",
       secondary="resource_tag_v2",
