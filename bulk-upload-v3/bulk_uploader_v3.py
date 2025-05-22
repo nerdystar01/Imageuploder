@@ -310,10 +310,10 @@ class PromptParser:
         for member_name, item in self.plave_manager.items.items():
             for alias in item.aliases:
                 # 콤마 제거하여 비교
-                clean_alias = alias.rstrip(',')
-                if clean_alias.lower() in lower_prompt:
+                # clean_alias = alias.rstrip(',')
+                if alias.lower() in lower_prompt:
                     detected_members.append(member_name)
-                    print(f"플레이브 멤버 발견: {member_name} (별칭: {clean_alias})")
+                    print(f"플레이브 멤버 발견: {member_name} (별칭: {alias})")
                     break
         
         return detected_members

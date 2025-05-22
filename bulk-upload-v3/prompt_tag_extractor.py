@@ -105,9 +105,9 @@ class PromptTagExtractor:
         # 플레이브 태그 추출
         for standard_name, item in self.plave_manager.items.items():
             for alias in item.aliases:
-                clean_alias = alias.rstrip(',')  # 콤마 제거
-                if clean_alias.lower() in lower_prompt:
-                    result['plaves'].append((clean_alias, standard_name))
+                # clean_alias = alias.rstrip(',')  # 콤마 제거
+                if alias.lower() in lower_prompt:
+                    result['plaves'].append((alias, standard_name))
                     result['has_plave_character'] = True  # 플레이브 캐릭터 포함 여부 설정
                     break
         
