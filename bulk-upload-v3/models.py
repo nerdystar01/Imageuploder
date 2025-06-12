@@ -246,6 +246,7 @@ class Resource(Base):
    placeholder_users = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
    node_options = relationship("NodeOption", back_populates="node_resource")
+   use_workflow = relationship("ComfyUiWorkflow", foreign_keys=[use_workflow_id], back_populates="used_in_resources")
 
    # Properties
    @property
@@ -256,31 +257,30 @@ class Resource(Base):
       return self.block_hash is not None and self.block_hash != ""
 
 class ComfyUiWorkflow(Base):
-    __tablename__ = 'comfy_ui_workflow'
-    
-    # Primary and Foreign Keys
-    id = Column(Integer, primary_key=True)
-    creater_id = Column(Integer, ForeignKey('user.id'), nullable=True)
-    
-    # Basic Info
-    title = Column(String(255), nullable=False)
-    description = Column(Text, default="")
-    workflow_file = Column(String(500), nullable=True)  # 파일 경로 저장
-    
-    # Count
-    count_like = Column(Integer, default=0)
-    
-    # Timestamps
-    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
-    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
-    
-    # Relationships
-    creater = relationship("User", foreign_keys=[creater_id], back_populates="created_workflows")
-    node_options = relationship("NodeOption", back_populates="workflow")
-    likes = relationship("User", secondary="workflow_likes", back_populates="liked_workflows")
-    users = relationship("User", secondary="workflow_users", back_populates="user_workflows")
-    used_in_resources = relationship("Resource", back_populates="use_workflow")
-
+   __tablename__ = 'comfy_ui_workflow'
+   
+   # Primary and Foreign Keys
+   id = Column(Integer, primary_key=True)
+   creater_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+   
+   # Basic Info
+   title = Column(String(255), nullable=False)
+   description = Column(Text, default="")
+   workflow_file = Column(String(500), nullable=True)  # 파일 경로 저장
+   
+   # Count
+   count_like = Column(Integer, default=0)
+   
+   # Timestamps
+   created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
+   updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+   
+   # Relationships
+   creater = relationship("User", foreign_keys=[creater_id], back_populates="created_workflows")
+   node_options = relationship("NodeOption", back_populates="workflow")
+   likes = relationship("User", secondary="workflow_likes", back_populates="liked_workflows")
+   users = relationship("User", secondary="workflow_users", back_populates="user_workflows")
+   used_in_resources = relationship("Resource", back_populates="use_workflow")
 
 class NodeOption(Base):
     __tablename__ = 'node_option'
