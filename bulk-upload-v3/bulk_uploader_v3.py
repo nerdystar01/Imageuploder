@@ -31,7 +31,8 @@ from models import (
     User,
     ColorCodeTags,
     SdModel,
-    Project
+    Project,
+    ComfyUiWorkflow
 )
 from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager, PlaveManager
 
@@ -292,7 +293,6 @@ class PromptParser:
         self.added_tag_ids = set()
         self.plave_manager = PlaveManager()
 
-    
     def _check_plave_members(self, prompt_text: str) -> List[str]:
         """
         프롬프트 텍스트에서 플레이브 멤버 이름을 확인합니다.
@@ -463,7 +463,7 @@ class CreateResource:
 
     def create_resource(self, user_id: int, original_image: Image.Image, 
                     image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
-                    session: Session, project_id: int = None) -> Resource:
+                    session: Session, project_id: int = None, workflow_id: int = None) -> Resource:
         """Create a new resource with uploaded images
         
         Args:
@@ -485,6 +485,9 @@ class CreateResource:
             # 프로젝트 ID가 지정된 경우 리소스에 연결
             if project_id is not None:
                 new_resource.project_id = project_id
+
+            if workflow_id is not None:
+                new_resource.use_workflow_id = workflow_id
                 
             session.add(new_resource)
             session.flush()  # Get the ID without committing
@@ -651,13 +654,29 @@ class CreateResource:
 #  Image Processing
 # ------------------------------
 class ImageProcessingSystem:
-    def __init__(self, user_id: int, default_tag_ids: List[int] = None, project_id: int = None):
+    def __init__(self, user_id: int, default_tag_ids: List[int] = None, project_id: int = None, workflow_id: int = None):
         self.png_util = PngUtill()
         self.prompt_parser = PromptParser()
         self.resource_creator = CreateResource()
         self.default_tag_ids = default_tag_ids or []
         self.user_id = user_id
-        self.project_id = project_id  # 프로젝트 ID 저장
+        self.project_id = project_id
+        self.workflow_id = workflow_id  # 워크플로우 ID 추가
+
+    def validate_workflow(self, session: Session) -> bool:
+        """
+        워크플로우 ID가 유효한지 확인합니다.
+        """
+        if self.workflow_id is None:
+            return True
+            
+        workflow = session.query(ComfyUiWorkflow).filter(ComfyUiWorkflow.id == self.workflow_id).first()
+        
+        if not workflow:
+            logging.error(f"워크플로우 ID {self.workflow_id}가 존재하지 않습니다.")
+            return False
+                
+        return True
 
     def validate_project(self, session: Session) -> bool:
         """
@@ -733,6 +752,10 @@ class ImageProcessingSystem:
         if not self.validate_project(session):
             raise ValueError(f"프로젝트 ID {self.project_id}가 유효하지 않습니다.")
         
+        # 워크플로우 유효성 검사 추가
+        if not self.validate_workflow(session):
+            raise ValueError(f"워크플로우 ID {self.workflow_id}가 유효하지 않습니다.")
+
         try:
             original_image = Image.open(image_path)
             image_128 = self.png_util.scale_image_by_height(original_image, 128)
@@ -744,7 +767,8 @@ class ImageProcessingSystem:
             # project_id 매개변수 추가
             resource = self.resource_creator.create_resource(
                 self.user_id, original_image, image_128, image_192, image_512, session,
-                project_id=self.project_id  # 프로젝트 ID 전달
+                project_id=self.project_id,
+                workflow_id=self.workflow_id  # 워크플로우 ID 전달
             )
             
             if params:
@@ -856,6 +880,19 @@ def get_user_input():
             except ValueError:
                 print("올바른 숫자를 입력해주세요.")
 
+        # Get workflow ID (optional)
+        workflow_id = None
+        add_workflow = input("업로드할 리소스에 워크플로우를 연결하시겠습니까? (y/n): ").strip().lower()
+        if add_workflow == 'y':
+            while True:
+                try:
+                    workflow_id_input = input("워크플로우 ID를 입력해주세요: ").strip()
+                    if workflow_id_input:
+                        workflow_id = int(workflow_id_input)
+                    break
+                except ValueError:
+                    print("올바른 숫자를 입력해주세요.")
+
         # Get project ID (optional)
         project_id = None
         add_project = input("업로드할 리소스를 프로젝트에 연결하시겠습니까? (y/n): ").strip().lower()
@@ -913,14 +950,14 @@ def get_user_input():
                 break
             print("'y' 또는 'n'을 입력해주세요.")
 
-        return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id
+        return user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id, workflow_id
+
 
     except KeyboardInterrupt:
         print("\n프로그램을 종료합니다.")
         sys.exit(0)
 
-
-def validate_inputs(session, user_id: int, tag_ids: list, project_id: int = None) -> Tuple[bool, str]:
+def validate_inputs(session, user_id: int, tag_ids: list, project_id: int = None, workflow_id: int = None) -> Tuple[bool, str]:
     """
     입력받은 user_id, tag_ids, project_id가 데이터베이스에 존재하는지 검증합니다.
     
@@ -953,8 +990,15 @@ def validate_inputs(session, user_id: int, tag_ids: list, project_id: int = None
             project = session.query(Project).filter_by(id=project_id).first()
             if not project:
                 return False, f"프로젝트 ID {project_id}가 존재하지 않습니다."
+        
+        # 워크플로우 검증
+        if workflow_id is not None:
+            workflow = session.query(ComfyUiWorkflow).filter_by(id=workflow_id).first()
+            if not workflow:
+                return False, f"워크플로우 ID {workflow_id}가 존재하지 않습니다."
 
         return True, "검증 성공"
+
 
     except Exception as e:
         return False, f"데이터베이스 검증 중 오류 발생: {str(e)}"
@@ -1105,9 +1149,8 @@ def get_subfolders(base_path):
     
     return subfolders
 
-
 def process_single_folder(utils, session, user_id, folder_path, default_tag_ids, is_character_folder, 
-                         created_tags_dict=None, project_id=None):
+                         created_tags_dict=None, project_id=None, workflow_id=None):
     """
     단일 폴더를 처리하는 함수
     
@@ -1154,7 +1197,8 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
     processor = ImageProcessingSystem(
         user_id=user_id,
         default_tag_ids=folder_tag_ids,
-        project_id=project_id  # 프로젝트 ID 추가
+        project_id=project_id,
+        workflow_id=workflow_id  # 워크플로우 ID 추가
     )
     
     # Show processing information
@@ -1164,6 +1208,8 @@ def process_single_folder(utils, session, user_id, folder_path, default_tag_ids,
     print(f"적용될 태그 ID: {folder_tag_ids}")
     if project_id:
         print(f"연결할 프로젝트 ID: {project_id}")
+    if workflow_id:
+        print(f"연결할 워크플로우 ID: {workflow_id}")
     
     # Process the folder
     processor.process_folder(folder_path)
@@ -1186,7 +1232,7 @@ def main():
         save_tag_mapping(tag_mapping)
 
         # Get user input with enhanced options (프로젝트 ID 추가)
-        user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id = get_user_input()
+        user_id, base_folder_path, default_tag_ids, process_subfolders, default_character_folder, project_id, workflow_id = get_user_input()
         
         # 데이터베이스 연결
         session, server = get_session()
@@ -1199,7 +1245,8 @@ def main():
             created_tags = {}
             
             # 입력값 검증 (프로젝트 ID 포함)
-            is_valid, error_message = validate_inputs(session, user_id, default_tag_ids, project_id)
+            is_valid, error_message = validate_inputs(session, user_id, default_tag_ids, project_id, workflow_id)
+
             if not is_valid:
                 print(f"\n오류: {error_message}")
                 return
@@ -1251,7 +1298,8 @@ def main():
                     default_tag_ids=default_tag_ids,
                     is_character_folder=is_character_folder,
                     created_tags_dict=created_tags,
-                    project_id=project_id  # 프로젝트 ID 전달
+                    project_id=project_id,
+                    workflow_id=workflow_id  # 워크플로우 ID 전달
                 )
             
             print("\n모든 폴더 처리가 완료되었습니다.")

@@ -223,6 +223,9 @@ class Resource(Base):
    # Timestamps
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+   
+   # Comfy
+   use_workflow_id = Column(Integer, ForeignKey('comfyui_workflow.id'), nullable=True)
 
    # Relationships
    tags = relationship(
@@ -238,7 +241,8 @@ class Resource(Base):
    project = relationship("Project", back_populates="resources")
    placeholder_users = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
-   
+   node_options = relationship("NodeOption", back_populates="node_resource")
+
    # Properties
    @property
    def is_mint(self):
@@ -246,6 +250,77 @@ class Resource(Base):
       block_hash 값이 있으면 True를 반환합니다.
       """
       return self.block_hash is not None and self.block_hash != ""
+
+class ComfyUiWorkflow(Base):
+    __tablename__ = 'comfy_ui_workflow'
+    
+    # Primary and Foreign Keys
+    id = Column(Integer, primary_key=True)
+    creater_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    
+    # Basic Info
+    title = Column(String(255), nullable=False)
+    description = Column(Text, default="")
+    workflow_file = Column(String(500), nullable=True)  # 파일 경로 저장
+    
+    # Count
+    count_like = Column(Integer, default=0)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
+    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+    
+    # Relationships
+    creater = relationship("User", foreign_keys=[creater_id], back_populates="created_workflows")
+    node_options = relationship("NodeOption", back_populates="workflow")
+    likes = relationship("User", secondary="workflow_likes", back_populates="liked_workflows")
+    users = relationship("User", secondary="workflow_users", back_populates="user_workflows")
+    used_in_resources = relationship("Resource", back_populates="use_workflow")
+
+
+class NodeOption(Base):
+    __tablename__ = 'node_option'
+    
+    # Primary and Foreign Keys
+    id = Column(Integer, primary_key=True)
+    workflow_id = Column(Integer, ForeignKey('comfy_ui_workflow.id'), nullable=True)
+    node_resource_id = Column(Integer, ForeignKey('resource.id'), nullable=True)
+    
+    # Node Info
+    node_number = Column(String(100), nullable=False)
+    node_type = Column(String(255), nullable=False)
+    node_key_1 = Column(String(3000), nullable=True)
+    node_value_1 = Column(String(3000), nullable=True)
+    node_key_2 = Column(String(3000), nullable=True)
+    node_value_2 = Column(String(3000), nullable=True)
+    node_content = Column(String(3000), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
+    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
+    
+    # Relationships
+    workflow = relationship("ComfyUiWorkflow", back_populates="node_options")
+    node_resource = relationship("Resource", back_populates="node_options")
+
+
+# Association Tables
+workflow_likes = Table('workflow_likes', Base.metadata,
+    Column('workflow_id', Integer, ForeignKey('comfy_ui_workflow.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('user.id'), primary_key=True)
+)
+
+workflow_users = Table('workflow_users', Base.metadata,
+    Column('workflow_id', Integer, ForeignKey('comfy_ui_workflow.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('user.id'), primary_key=True)
+)
+
+# ManyToMany를 위한 workflow_node_option 테이블
+workflow_node_option = Table('workflow_node_option', Base.metadata,
+    Column('workflow_id', Integer, ForeignKey('comfy_ui_workflow.id'), primary_key=True),
+    Column('node_option_id', Integer, ForeignKey('node_option.id'), primary_key=True)
+)
+
 
 class ColorCodeTags(Base):
    __tablename__ = 'color_code_tags'
