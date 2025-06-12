@@ -229,7 +229,7 @@ class Resource(Base):
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
    
    # Comfy
-   use_workflow_id = Column(Integer, ForeignKey('comfyui_workflow.id'), nullable=True)
+   use_workflow_id = Column(Integer, ForeignKey('comfy_ui_workflow.id'), nullable=True)
 
    # Relationships
    tags = relationship(
