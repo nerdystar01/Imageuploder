@@ -107,6 +107,10 @@ class User(Base):
    owned_projects = relationship("Project", back_populates="owner", foreign_keys="Project.owner_id")
    joined_projects = relationship("Project", secondary=project_members, back_populates="members")
 
+   created_workflows = relationship("ComfyUiWorkflow", back_populates="creater", foreign_keys="ComfyUiWorkflow.creater_id")
+   liked_workflows = relationship("ComfyUiWorkflow", secondary="workflow_likes", back_populates="likes")
+   user_workflows = relationship("ComfyUiWorkflow", secondary="workflow_users", back_populates="users")
+
 class ResourceTagV2(Base):
    __tablename__ = 'resource_tag_v2'
    
