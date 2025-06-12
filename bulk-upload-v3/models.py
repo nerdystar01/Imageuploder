@@ -246,7 +246,11 @@ class Resource(Base):
    placeholder_users = relationship("User", secondary=resource_placeholder, back_populates="placeholder_resources")
    view_status = relationship("User", secondary=resource_view_status, back_populates="viewed_resources")
    node_options = relationship("NodeOption", back_populates="node_resource")
-   use_workflow = relationship("ComfyUiWorkflow", foreign_keys=[use_workflow_id], back_populates="used_in_resources")
+   use_workflow = relationship(
+        "ComfyUiWorkflow", 
+        primaryjoin="Resource.use_workflow_id==ComfyUiWorkflow.id",
+        back_populates="used_in_resources"
+    )
 
    # Properties
    @property
