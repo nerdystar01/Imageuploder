@@ -8,7 +8,7 @@ from urllib.parse import quote_plus
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, Table, UniqueConstraint, func, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSON
 import pytz
 
 # 서울 timezone 설정
@@ -230,6 +230,7 @@ class Resource(Base):
    
    # Comfy
    use_workflow_id = Column(Integer, ForeignKey('comfy_ui_workflow.id'), nullable=True)
+   workflow_data = Column(JSON, default=dict, nullable=True)
 
    # Relationships
    tags = relationship(
