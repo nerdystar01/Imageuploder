@@ -461,26 +461,62 @@ class CreateResource:
     def __init__(self):
         pass
 
+    # def create_resource(self, user_id: int, original_image: Image.Image, 
+    #                 image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
+    #                 session: Session, project_id: int = None, workflow_id: int = None) -> Resource:
+    #     """Create a new resource with uploaded images
+        
+    #     Args:
+    #         user_id: User ID for the resource
+    #         original_image: Original PIL image
+    #         image_128: Thumbnail image (128px)
+    #         image_192: Thumbnail image (192px)
+    #         image_512: Thumbnail image (512px)
+    #         session: Database session
+    #         project_id: Project ID to associate with the resource (optional)
+            
+    #     Returns:
+    #         Resource: Created resource object
+    #     """
+    #     try:
+    #         # Create new resource
+    #         new_resource = Resource(user_id=user_id, challenge_points=0)
+            
+    #         # 프로젝트 ID가 지정된 경우 리소스에 연결
+    #         if project_id is not None:
+    #             new_resource.project_id = project_id
+
+    #         if workflow_id is not None:
+    #             new_resource.use_workflow_id = workflow_id
+                
+    #         session.add(new_resource)
+    #         session.flush()  # Get the ID without committing
+            
+    #         # Upload images
+    #         try:
+    #             self._upload_images(new_resource, original_image, image_128, image_192, image_512)
+    #             session.commit()
+    #             return new_resource
+    #         except Exception as e:
+    #             session.rollback()
+    #             logging.error(f"Failed to upload images: {str(e)}")
+    #             raise
+
+    #     except Exception as e:
+    #         session.rollback()
+    #         logging.error(f"Failed to create resource: {str(e)}")
+    #         raise
     def create_resource(self, user_id: int, original_image: Image.Image, 
                     image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
                     session: Session, project_id: int = None, workflow_id: int = None) -> Resource:
-        """Create a new resource with uploaded images
-        
-        Args:
-            user_id: User ID for the resource
-            original_image: Original PIL image
-            image_128: Thumbnail image (128px)
-            image_192: Thumbnail image (192px)
-            image_512: Thumbnail image (512px)
-            session: Database session
-            project_id: Project ID to associate with the resource (optional)
-            
-        Returns:
-            Resource: Created resource object
-        """
+        """Create a new resource with uploaded images"""
         try:
             # Create new resource
             new_resource = Resource(user_id=user_id, challenge_points=0)
+            
+            # 실제 이미지 크기를 바로 저장 (추가된 부분)
+            new_resource.width = original_image.width
+            new_resource.height = original_image.height
             
             # 프로젝트 ID가 지정된 경우 리소스에 연결
             if project_id is not None:
@@ -614,10 +650,14 @@ class CreateResource:
                     resource.sampler_scheduler = None
 
             # Size 처리
-            if "Size" in params:
-                width, height = map(int, params["Size"].split('x'))
-                resource.width = width
-                resource.height = height
+            # if "Size" in params:
+            #     width, height = map(int, params["Size"].split('x'))
+            #     resource.width = width
+            #     resource.height = height
+            # else:
+            #     # 메타데이터가 없으면 실제 이미지 크기 사용
+            #     resource.width = original_image.width
+            #     resource.height = original_image.height
 
             # Model hash 처리
             if "Model hash" in params:
