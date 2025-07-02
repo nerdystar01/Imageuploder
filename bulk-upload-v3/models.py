@@ -160,7 +160,7 @@ class Resource(Base):
    name = Column(String(1000), default="")
    description = Column(Text, default="")
    image = Column(String(200), default="")
-   
+   caption = Column(String(2200), default="")
    # Generation Info
    generation_data = Column(Text, default="")
    model_name = Column(String(200), default="")
