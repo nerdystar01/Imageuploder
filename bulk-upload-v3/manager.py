@@ -226,234 +226,234 @@ class CharacterManager(BaseManager):
         super().__init__()
         self.items = {
             # 앤드류
-            'Andrew': BaseItem('Andrew', ['andrew,', 'nsandrew,']),
+            'Andrew': BaseItem('Andrew', ['andrew,', 'nsandrew,', 'Andrew \(4G9\)']),
             # 아카네
-            'Akane': BaseItem('Akane', ['Akane,', 'akane,', 'nsakane,']),
+            'Akane': BaseItem('Akane', ['Akane,', 'akane,', 'nsakane,', 'Akane \(4G9\)']),
             # 비트
-            'Beat': BaseItem('Beat', ['4g9_beat,', 'beat,', 'nsbeat,']),
+            'Beat': BaseItem('Beat', ['4g9_beat,', 'beat,', 'nsbeat,', 'Beat \(4G9\)']),
             # 블레이크
-            'Blake': BaseItem('Blake', ['blake,', 'nsblake,']),
+            'Blake': BaseItem('Blake', ['blake,', 'nsblake,', 'Blake \(4G9\)']),
             # 셀막
-            'Celmech': BaseItem('Celmech', ['celmech,', 'nscelmech,', 'celmek,', 'nscelmek,']),
+            'Celmech': BaseItem('Celmech', ['celmech,', 'nscelmech,', 'celmek,', 'nscelmek,', 'Celmech \(4G9\)']),
             # 그리스
-            'Gris': BaseItem('Gris', ['gris,', 'nsgris,']),
+            'Gris': BaseItem('Gris', ['gris,', 'nsgris,', 'Gris \(4G9\)']),
             # 하이도
-            'Hyde': BaseItem('Hyde', ['hyde,', 'hydo,', 'nshyde,']),
+            'Hyde': BaseItem('Hyde', ['hyde,', 'hydo,', 'nshyde,', 'Hyde \(4G9\)']),
             # 존쿠퍼
-            'JohnCooper': BaseItem('JohnCooper', ['4g9_cooper,', 'cooper,', 'johncooper', 'nsjohncooper,']),
+            'JohnCooper': BaseItem('JohnCooper', ['4g9_cooper,', 'cooper,', 'johncooper', 'nsjohncooper,', 'JohnCooper \(4G9\)']),
             # 문스톤
-            'Moonstone': BaseItem('Moonstone', ['moonstone,', 'nsmoonstone,']),
+            'Moonstone': BaseItem('Moonstone', ['moonstone,', 'nsmoonstone,', 'Moonstone \(4G9\)']),
             # 무로
-            'Muro': BaseItem('Muro', ['muro,', 'muro_mech,', 'nsmuro,']),
+            'Muro': BaseItem('Muro', ['muro,', 'muro_mech,', 'nsmuro,', 'Muro \(4G9\)']),
             # 오스카
-            'Oscar': BaseItem('Oscar', ['oscar,', 'singer_male,', 'nsoscar,']),
+            'Oscar': BaseItem('Oscar', ['oscar,', 'singer_male,', 'nsoscar,', 'Oscar \(4G9\)']),
             # P-5
-            'P-5': BaseItem('P-5', ['P_5.D,', 'nsp-5,']),
+            'P-5': BaseItem('P-5', ['P_5.D,', 'nsp-5,', 'P-5 \(4G9\)']),
             # 라비
-            'Ravi': BaseItem('Ravi', ['ravi,', 'nsravi,']),
+            'Ravi': BaseItem('Ravi', ['ravi,', 'nsravi,', 'Ravi \(4G9\)']),
             # RV
-            'Rv': BaseItem('Rv', ['rv,', 'nsrv,']),
+            'Rv': BaseItem('Rv', ['rv,', 'nsrv,', 'Rv \(4G9\)']),
             # 슬레셔
-            'Slasher': BaseItem('Slasher', ['slasher,', 'nsslasher,']),
+            'Slasher': BaseItem('Slasher', ['slasher,', 'nsslasher,', 'Slasher \(4G9\)']),
             # 유고
-            'UGo': BaseItem('UGo', ['yugo,', 'nsugo,']),
+            'UGo': BaseItem('UGo', ['yugo,', 'nsugo,', 'UGo \(4G9\)']),
             # 솔
-            'Soll': BaseItem('Soll', ['sol,', 'soll,', 'nssoll,']),
+            'Soll': BaseItem('Soll', ['sol,', 'soll,', 'nssoll,', 'Soll \(4G9\)']),
             # 베르도르만
-            'Verdorman': BaseItem('Verdorman', ['verdoman,', 'verdorman.', 'nsverdorman,']),
+            'Verdorman': BaseItem('Verdorman', ['verdoman,', 'verdorman.', 'nsverdorman,', 'Verdorman \(4G9\)']),
             # 엔젤
-            'Engel': BaseItem('Engel', ['engel,', 'nsengel,']),
+            'Engel': BaseItem('Engel', ['engel,', 'nsengel,', 'Engel \(4G9\)']),
             # 하니
-            'Hani': BaseItem('Hani', ['4g9_honey,', 'sniper_girl,', 'nshani,']),
+            'Hani': BaseItem('Hani', ['4g9_honey,', 'sniper_girl,', 'nshani,', 'Hani \(4G9\)']),
             # 조아
-            'Joa': BaseItem('Joa', ['joa,', '4g9_joa,', 'nsjoa,']),
+            'Joa': BaseItem('Joa', ['joa,', '4g9_joa,', 'nsjoa,', 'Joa \(4G9\)']),
             # 로라
-            'Lora': BaseItem('Lora', ['nslora,', '4g9_lora,']),
+            'Lora': BaseItem('Lora', ['nslora,', '4g9_lora,', 'Lora \(4G9\)']),
             # 마더
-            'Mother': BaseItem('Mother', ['mother,', '4g9_mother,', 'nsmother,']),
+            'Mother': BaseItem('Mother', ['mother,', '4g9_mother,', 'nsmother,', 'Mother \(4G9\)']),
             # 프리
-            'Pre': BaseItem('Pre', ['pre,', '4g9_pre,', 'nspre,']),
+            'Pre': BaseItem('Pre', ['pre,', '4g9_pre,', 'nspre,', 'Pre \(4G9\)']),
             # 스칼렛
-            'Scarlett': BaseItem('Scarlett', ['4g9_scarlet,', '4g9_scarlett,', 'nsscarlett,', 'nsscarlet,']),
+            'Scarlett': BaseItem('Scarlett', ['4g9_scarlet,', '4g9_scarlett,', 'nsscarlett,', 'nsscarlet,', 'Scarlett \(4G9\)']),
             # ZP
-            'ZP': BaseItem('ZP', ['4g9_zp,', 'zp,', 'ZP', 'nszp,']),
+            'ZP': BaseItem('ZP', ['4g9_zp,', 'zp,', 'ZP', 'nszp,', 'ZP \(4G9\)']),
             # 이고르
-            'Agro': BaseItem('Agro', ['agro,', 'aguro,', 'nsagro,']),
+            'Agro': BaseItem('Agro', ['agro,', 'aguro,', 'nsagro,', 'Agro \(4G9\)']),
             # 백사
-            'Baeksa': BaseItem('Baeksa', ['baeksa,', 'beaksa,', 'nsbaeksa,']),
+            'Baeksa': BaseItem('Baeksa', ['baeksa,', 'beaksa,', 'nsbaeksa,', 'Baeksa \(4G9\)']),
             # 블랑
-            'Blanc': BaseItem('Blanc', ['blanc,', 'nsblanc,']),
+            'Blanc': BaseItem('Blanc', ['blanc,', 'nsblanc,', 'Blanc \(4G9\)']),
             # 채티
-            'Chati': BaseItem('Chati', ['chati,', 'nschati,']),
+            'Chati': BaseItem('Chati', ['chati,', 'nschati,', 'Chati \(4G9\)']),
             # 실험체 01
             # 'Experiment01': BaseItem('Experiment01', ['experiment01,', 'nsexperiment01,']),
-            'Greta' : BaseItem('Greta', ['experiment01,', 'nsexperiment01,', 'nsgreta,', ]),
+            'Greta' : BaseItem('Greta', ['experiment01,', 'nsexperiment01,', 'nsgreta,', 'Greta \(4G9\)']),
             # 실험체 02
-            'Experiment02': BaseItem('Experiment02', ['experiment02,', 'nsexperiment02,', 'nst-0']),
+            'Experiment02': BaseItem('Experiment02', ['experiment02,', 'nsexperiment02,', 'nst-0', 'Experiment02 \(4G9\)']),
             # 사장
-            'Employee': BaseItem('Employee', ['employee,', 'nsemployee,']),
+            'Employee': BaseItem('Employee', ['employee,', 'nsemployee,', 'Employee \(4G9\)']),
             # 하이든
-            'Hayden': BaseItem('Hayden', ['hayden,', 'hikey_female,', 'nshayden,']),
+            'Hayden': BaseItem('Hayden', ['hayden,', 'hikey_female,', 'nshayden,', 'Hayden \(4G9\)']),
             # 헤이즈
-            'Heize': BaseItem('Heize', ['heize,', 'singer,', 'singer_female,', 'nsheize,']),
+            'Heize': BaseItem('Heize', ['heize,', 'singer,', 'singer_female,', 'nsheize,', 'Heize \(4G9\)']),
             # 하이키
-            'Hyki': BaseItem('Hyki', ['hikey,', 'hyki,', 'nshyki,']),
+            'Hyki': BaseItem('Hyki', ['hikey,', 'hyki,', 'nshyki,', 'Hyki \(4G9\)']),
             # 아이리
-            'Irey': BaseItem('Irey', ['irie,', 'nsirey,']),
+            'Irey': BaseItem('Irey', ['irie,', 'nsirey,', 'Irey \(4G9\)']),
             # 우편배달소녀
-            'Lettergirl': BaseItem('Lettergirl', ['lettergirl,', 'nslettergirl,']),
+            'Lettergirl': BaseItem('Lettergirl', ['lettergirl,', 'nslettergirl,', 'Lettergirl \(4G9\)']),
             # 마리
-            'Mari': BaseItem('Mari', ['mari,', 'nsmari,']),
+            'Mari': BaseItem('Mari', ['mari,', 'nsmari,', 'Mari \(4G9\)']),
             # 밀터
-            'Milter': BaseItem('Milter', ['milter,', 'milter_female,', 'nsmilter,']),
+            'Milter': BaseItem('Milter', ['milter,', 'milter_female,', 'nsmilter,', 'Milter \(4G9\)']),
             # 나비걸
-            'Navy_girl': BaseItem('Navy_girl', ['navy_girl,', 'nsnavy_girl,']),
+            'Navy_girl': BaseItem('Navy_girl', ['navy_girl,', 'nsnavy_girl,', 'Navy_girl \(4G9\)']),
             # 니노
-            'Nino': BaseItem('Nino', ['nino,', 'nsnino,']),
+            'Nino': BaseItem('Nino', ['nino,', 'nsnino,', 'Nino \(4G9\)']),
             # 노아
-            'Noah': BaseItem('Noah', ['noah,', 'nsnoah,']),
+            'Noah': BaseItem('Noah', ['noah,', 'nsnoah,', 'Noah \(4G9\)']),
             # 페르사
-            'Persa': BaseItem('Persa', ['persa,', 'fersa,', 'nspersa,']),
+            'Persa': BaseItem('Persa', ['persa,', 'fersa,', 'nspersa,', 'Persa \(4G9\)']),
             # 파더
-            'Father': BaseItem('Father', ['father,', 'nsfather,']),
+            'Father': BaseItem('Father', ['father,', 'nsfather,', 'Father \(4G9\)']),
             # 렘
-            'Rem': BaseItem('Rem', ['rem,', 'nsrem,']),
+            'Rem': BaseItem('Rem', ['rem,', 'nsrem,', 'Rem \(4G9\)']),
             # 린메이
-            'LinMei': BaseItem('LinMei', ['rinmei,', 'linmei,', 'nslinmei,']),
+            'LinMei': BaseItem('LinMei', ['rinmei,', 'linmei,', 'nslinmei,', 'LinMei \(4G9\)']),
             # 린샤오
-            'LinXiao': BaseItem('LinXiao', ['rinshao,', 'rinshao_female,', 'linxiao,', 'nslinxiao,']),
+            'LinXiao': BaseItem('LinXiao', ['rinshao,', 'rinshao_female,', 'linxiao,', 'nslinxiao,', 'LinXiao \(4G9\)']),
             # 루아이
-            'RU-i': BaseItem('RU-i', ['ru-i,', 'nsru-i,']),
+            'RU-i': BaseItem('RU-i', ['ru-i,', 'nsru-i,', 'RU-i \(4G9\)']),
             # 산토스
-            'Santos': BaseItem('Santos', ['santos,', 'santos_female,', 'nssantos,']),
+            'Santos': BaseItem('Santos', ['santos,', 'santos_female,', 'nssantos,', 'Santos \(4G9\)']),
             # 시미즈
-            'Shimizu': BaseItem('Shimizu', ['shimizu,', 'nsshimizu,']),
+            'Shimizu': BaseItem('Shimizu', ['shimizu,', 'nsshimizu,', 'Shimizu \(4G9\)']),
             # 단비
-            'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,', 'nsdanbi,']),
+            'Danbi': BaseItem('Danbi', ['space_girl,', 'space girl,', 'danbi,', 'nsdanbi,', 'Danbi \(4G9\)']),
             # 드와이트
-            'Dwight': BaseItem('Dwight', ['dwight,', 'nsdwight,']),
+            'Dwight': BaseItem('Dwight', ['dwight,', 'nsdwight,', 'Dwight \(4G9\)']),
             # Ohm
-            'Ohm': BaseItem('Ohm', ['ohm,', 'nsohm,']),
+            'Ohm': BaseItem('Ohm', ['ohm,', 'nsohm,', 'Ohm \(4G9\)']),
             # Spitz
-            'Spitz': BaseItem('Spitz', ['spitz,', 'nsspitz,']),
+            'Spitz': BaseItem('Spitz', ['spitz,', 'nsspitz,', 'Spitz \(4G9\)']),
             # Campo
-            'Campo': BaseItem('Campo', ['campo,', 'nscampo,']),
+            'Campo': BaseItem('Campo', ['campo,', 'nscampo,', 'Campo \(4G9\)']),
             # Vulkan
-            'Vulkan': BaseItem('Vulkan', ['vulkan,', 'nsvulkan,']),
+            'Vulkan': BaseItem('Vulkan', ['vulkan,', 'nsvulkan,', 'Vulkan \(4G9\)']),
             # NPC AGKid
-            'AGKid': BaseItem('AGKid', ['nsagkid,']),
+            'AGKid': BaseItem('AGKid', ['nsagkid,', 'AGKid \(4G9\)']),
             # NPC Aiken
-            'Aiken': BaseItem('Aiken', ['nsaiken,']),
+            'Aiken': BaseItem('Aiken', ['nsaiken,', 'Aiken \(4G9\)']),
             # NPC Banny
-            'Banny': BaseItem('Banny', ['nsbanny,']),
+            'Banny': BaseItem('Banny', ['nsbanny,', 'Banny \(4G9\)']),
             # NPC Bibi
-            'Bibi': BaseItem('Bibi', ['nsbibi,']),
+            'Bibi': BaseItem('Bibi', ['nsbibi,', 'Bibi \(4G9\)']),
             # NPC BoolKKaebi
-            'BoolKKaebi': BaseItem('BoolKKaebi', ['nsboolkkaebi,']),
+            'BoolKKaebi': BaseItem('BoolKKaebi', ['nsboolkkaebi,', 'BoolKKaebi \(4G9\)']),
             # NPC Brody
-            'Brody': BaseItem('Brody', ['nsbrody,']),
+            'Brody': BaseItem('Brody', ['nsbrody,', 'Brody \(4G9\)']),
             # NPC Cappuccino
-            'Cappuccino': BaseItem('Cappuccino', ['nscappuccino,']),
+            'Cappuccino': BaseItem('Cappuccino', ['nscappuccino,', 'Cappuccino \(4G9\)']),
             # NPC Casey
-            'Casey': BaseItem('Casey', ['nscasey,']),
+            'Casey': BaseItem('Casey', ['nscasey,', 'Casey \(4G9\)']),
             # NPC ChoiPro
-            'ChoiPro': BaseItem('ChoiPro', ['nschoipro,']),
+            'ChoiPro': BaseItem('ChoiPro', ['nschoipro,', 'ChoiPro \(4G9\)']),
             # NPC Chrono
-            'Chrono': BaseItem('Chrono', ['nschrono,']),
+            'Chrono': BaseItem('Chrono', ['nschrono,', 'Chrono \(4G9\)']),
             # NPC Dueoksini
-            'Dueoksini': BaseItem('Dueoksini', ['nsdueoksini,']),
+            'Dueoksini': BaseItem('Dueoksini', ['nsdueoksini,', 'Dueoksini \(4G9\)']),
             # NPC Flora
-            'Flora': BaseItem('Flora', ['nsflora,']),
+            'Flora': BaseItem('Flora', ['nsflora,', 'Flora \(4G9\)']),
             # NPC Glenda
-            'Glenda': BaseItem('Glenda', ['nsglenda,']),
+            'Glenda': BaseItem('Glenda', ['nsglenda,', 'Glenda \(4G9\)']),
             # NPC Goffrey
-            'Goffrey': BaseItem('Goffrey', ['nsgoffrey,']),
+            'Goffrey': BaseItem('Goffrey', ['nsgoffrey,', 'Goffrey \(4G9\)']),
             # NPC Hari
-            'Hari': BaseItem('Hari', ['nshari,']),
+            'Hari': BaseItem('Hari', ['nshari,', 'Hari \(4G9\)']),
             # NPC Hiruma
-            'Hiruma': BaseItem('Hiruma', ['nshiruma,']),
+            'Hiruma': BaseItem('Hiruma', ['nshiruma,', 'Hiruma \(4G9\)']),
             # NPC Hoon
-            'Hoon': BaseItem('Hoon', ['nshoon,']),
+            'Hoon': BaseItem('Hoon', ['nshoon,', 'Hoon \(4G9\)']),
             # NPC HungryManekin
-            'HungryManekin': BaseItem('HungryManekin', ['nshungrymanekin,']),
+            'HungryManekin': BaseItem('HungryManekin', ['nshungrymanekin,', 'HungryManekin \(4G9\)']),
             # NPC Jackson
-            'Jackson': BaseItem('Jackson', ['nsjackson,']),
+            'Jackson': BaseItem('Jackson', ['nsjackson,', 'Jackson \(4G9\)']),
             # NPC Jaeden
-            'Jaeden': BaseItem('Jaeden', ['nsjaeden,']),
+            'Jaeden': BaseItem('Jaeden', ['nsjaeden,', 'Jaeden \(4G9\)']),
             # NPC Jenna
-            'Jenna': BaseItem('Jenna', ['nsjenna,']),
+            'Jenna': BaseItem('Jenna', ['nsjenna,', 'Jenna \(4G9\)']),
             # NPC Lackey
-            'Lackey': BaseItem('Lackey', ['nslackey,']),
+            'Lackey': BaseItem('Lackey', ['nslackey,', 'Lackey \(4G9\)']),
             # NPC LinMei
-            'LinMei': BaseItem('LinMei', ['nslinmei,']),
+            'LinMei': BaseItem('LinMei', ['nslinmei,', 'LinMei \(4G9\)']),
             # NPC Mark
-            'Mark': BaseItem('Mark', ['nsmark,']),
+            'Mark': BaseItem('Mark', ['nsmark,', 'Mark \(4G9\)']),
             # NPC Min
-            'Min': BaseItem('Min', ['nsmin,']),
+            'Min': BaseItem('Min', ['nsmin,', 'Min \(4G9\)']),
             # NPC Minibit
-            'Minibit': BaseItem('Minibit', ['nsminibit,']),
+            'Minibit': BaseItem('Minibit', ['nsminibit,', 'Minibit \(4G9\)']),
             # NPC MissPark
-            'MissPark': BaseItem('MissPark', ['nsmisspark,', 'nsmisspark2,']),
+            'MissPark': BaseItem('MissPark', ['nsmisspark,', 'nsmisspark2,', 'MissPark \(4G9\)']),
             # NPC MissPark2
             # 'MissPark2': BaseItem('MissPark2', ['nsmisspark2,']),
             # NPC Muro
-            'Muro': BaseItem('Muro', ['nsmuro,']),
+            'Muro': BaseItem('Muro', ['nsmuro,', 'Muro \(4G9\)']),
             # NPC Mystic
-            'Mystic': BaseItem('Mystic', ['nsmystic,']),
+            'Mystic': BaseItem('Mystic', ['nsmystic,', 'Mystic \(4G9\)']),
             # NPC Nana
-            'Nana': BaseItem('Nana', ['nsnana,']),
+            'Nana': BaseItem('Nana', ['nsnana,', 'Nana \(4G9\)']),
             # NPC NaviiFront
-            'NaviiFront': BaseItem('NaviiFront', ['nsnaviifront,']),
+            'NaviiFront': BaseItem('NaviiFront', ['nsnaviifront,', 'NaviiFront \(4G9\)']),
             # NPC Noira
-            'Noira': BaseItem('Noira', ['nsnoira,']),
+            'Noira': BaseItem('Noira', ['nsnoira,', 'Noira \(4G9\)']),
             # NPC Nyx
-            'Nyx': BaseItem('Nyx', ['nsnyx,']),
+            'Nyx': BaseItem('Nyx', ['nsnyx,', 'Nyx \(4G9\)']),
             # NPC Oliver
-            'Oliver': BaseItem('Oliver', ['nsoliver,']),
+            'Oliver': BaseItem('Oliver', ['nsoliver,', 'Oliver \(4G9\)']),
             # NPC Oscar
-            'Oscar': BaseItem('Oscar', ['nsoscar,']),
+            'Oscar': BaseItem('Oscar', ['nsoscar,', 'Oscar \(4G9\)']),
             # NPC Otto
-            'Otto': BaseItem('Otto', ['nsotto,']),
+            'Otto': BaseItem('Otto', ['nsotto,', 'Otto \(4G9\)']),
             # NPC RabbitKing
-            'RabbitKing': BaseItem('RabbitKing', ['nsrabbitking,']),
+            'RabbitKing': BaseItem('RabbitKing', ['nsrabbitking,', 'RabbitKing \(4G9\)']),
             # NPC Ravi
-            'Ravi': BaseItem('Ravi', ['nsravi,']),
+            'Ravi': BaseItem('Ravi', ['nsravi,', 'Ravi \(4G9\)']),
             # NPC Sajang
-            'Sajang': BaseItem('Sajang', ['nssajang,']),
+            'Sajang': BaseItem('Sajang', ['nssajang,', 'Sajang \(4G9\)']),
             # NPC Santa
-            'Santa': BaseItem('Santa', ['nssanta,']),
+            'Santa': BaseItem('Santa', ['nssanta,', 'Santa \(4G9\)']),
             # NPC Selina
-            'Selina': BaseItem('Selina', ['nsselina,']),
+            'Selina': BaseItem('Selina', ['nsselina,', 'Selina \(4G9\)']),
             # NPC Seth
-            'Seth': BaseItem('Seth', ['nsseth,']),
+            'Seth': BaseItem('Seth', ['nsseth,', 'Seth \(4G9\)']),
             # NPC ShadeR
-            'ShadeR': BaseItem('ShadeR', ['nsshader,']),
+            'ShadeR': BaseItem('ShadeR', ['nsshader,', 'ShadeR \(4G9\)']),
             # NPC Siren
-            'Siren': BaseItem('Siren', ['nssiren,']),
+            'Siren': BaseItem('Siren', ['nssiren,', 'Siren \(4G9\)']),
             # NPC Slammer
-            'Slammer': BaseItem('Slammer', ['nsslammer,']),
+            'Slammer': BaseItem('Slammer', ['nsslammer,', 'Slammer \(4G9\)']),
             # NPC T8
-            'T8': BaseItem('T8', ['nst8,', 'nst-8,']),
+            'T8': BaseItem('T8', ['nst8,', 'nst-8,', 'T8 \(4G9\)']),
             # NPC T9
-            'T9': BaseItem('T9', ['nst9,', 'nst-9,']),
+            'T9': BaseItem('T9', ['nst9,', 'nst-9,', 'T9 \(4G9\)']),
             # NPC Takeru
-            'Takeru': BaseItem('Takeru', ['nstakeru,']),
+            'Takeru': BaseItem('Takeru', ['nstakeru,', 'Takeru \(4G9\)']),
             # NPC Tatamoo
-            'Tatamoo': BaseItem('Tatamoo', ['nstatamoo,']),
+            'Tatamoo': BaseItem('Tatamoo', ['nstatamoo,', 'Tatamoo \(4G9\)']),
             # NPC Totory
-            'Totory': BaseItem('Totory', ['nstotory,']),
+            'Totory': BaseItem('Totory', ['nstotory,', 'Totory \(4G9\)']),
             # NPC Xiu
-            'Xiu': BaseItem('Xiu', ['nsxiu,']),
+            'Xiu': BaseItem('Xiu', ['nsxiu,', 'Xiu \(4G9\)']),
             # NPC Yeonwoo
-            'Yeonwoo': BaseItem('Yeonwoo', ['nsyeonwoo,']),
+            'Yeonwoo': BaseItem('Yeonwoo', ['nsyeonwoo,', 'Yeonwoo \(4G9\)']),
             # NPC Yujin
-            'Yujin': BaseItem('Yujin', ['nsyujin,']),
+            'Yujin': BaseItem('Yujin', ['nsyujin,', 'Yujin \(4G9\)']),
             # NPC Zachary
-            'Zachary': BaseItem('Zachary', ['nszachary,']),
-            'Blacky': BaseItem('Blacky', ['blacky,', 'nsblacky,']),
-            'Yue': BaseItem('Yue', ['nsyue,', 'yue,']),
-            'Dane': BaseItem('Dane', ['nsdane,', 'dane,']),
-        }   
+            'Zachary': BaseItem('Zachary', ['nszachary,', 'Zachary \(4G9\)']),
+            'Blacky': BaseItem('Blacky', ['blacky,', 'nsblacky,', 'Blacky \(4G9\)']),
+            'Yue': BaseItem('Yue', ['nsyue,', 'yue,', 'Yue \(4G9\)']),
+            'Dane': BaseItem('Dane', ['nsdane,', 'dane,', 'Dane \(4G9\)']),
+        }  
 
 class PlaveManager(BaseManager):
      def __init__(self):
