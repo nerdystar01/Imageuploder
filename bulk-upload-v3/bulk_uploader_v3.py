@@ -462,51 +462,6 @@ class CreateResource:
     def __init__(self):
         pass
 
-    # def create_resource(self, user_id: int, original_image: Image.Image, 
-    #                 image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
-    #                 session: Session, project_id: int = None, workflow_id: int = None) -> Resource:
-    #     """Create a new resource with uploaded images
-        
-    #     Args:
-    #         user_id: User ID for the resource
-    #         original_image: Original PIL image
-    #         image_128: Thumbnail image (128px)
-    #         image_192: Thumbnail image (192px)
-    #         image_512: Thumbnail image (512px)
-    #         session: Database session
-    #         project_id: Project ID to associate with the resource (optional)
-            
-    #     Returns:
-    #         Resource: Created resource object
-    #     """
-    #     try:
-    #         # Create new resource
-    #         new_resource = Resource(user_id=user_id, challenge_points=0)
-            
-    #         # 프로젝트 ID가 지정된 경우 리소스에 연결
-    #         if project_id is not None:
-    #             new_resource.project_id = project_id
-
-    #         if workflow_id is not None:
-    #             new_resource.use_workflow_id = workflow_id
-                
-    #         session.add(new_resource)
-    #         session.flush()  # Get the ID without committing
-            
-    #         # Upload images
-    #         try:
-    #             self._upload_images(new_resource, original_image, image_128, image_192, image_512)
-    #             session.commit()
-    #             return new_resource
-    #         except Exception as e:
-    #             session.rollback()
-    #             logging.error(f"Failed to upload images: {str(e)}")
-    #             raise
-
-    #     except Exception as e:
-    #         session.rollback()
-    #         logging.error(f"Failed to create resource: {str(e)}")
-    #         raise
     def create_resource(self, user_id: int, original_image: Image.Image, 
                     image_128: Image.Image, image_192: Image.Image, image_512: Image.Image, 
                     session: Session, project_id: int = None, workflow_id: int = None) -> Resource:
@@ -515,9 +470,8 @@ class CreateResource:
             # Create new resource
             new_resource = Resource(user_id=user_id, challenge_points=0)
             
-            # 실제 이미지 크기를 바로 저장 (추가된 부분)
-            new_resource.width = original_image.width
-            new_resource.height = original_image.height
+            # 이미지 크기는 나중에 메타데이터에서 설정하거나 실제 크기 사용
+            # 여기서는 기본값만 설정 (제거됨)
             
             # 프로젝트 ID가 지정된 경우 리소스에 연결
             if project_id is not None:
@@ -610,7 +564,7 @@ class CreateResource:
             raise
 
     def _resource_parser(self, geninfo: str, params: dict, resource: Resource, 
-                        session: Session, generation_data: str = None) -> None:
+                        session: Session, generation_data: str = None, original_image: Image.Image = None) -> None:
         """Parse parameters and update resource attributes"""
         try:
             # 기본 파라미터 매핑
@@ -650,15 +604,26 @@ class CreateResource:
                     resource.sampler = sampler
                     resource.sampler_scheduler = None
 
-            # Size 처리
-            # if "Size" in params:
-            #     width, height = map(int, params["Size"].split('x'))
-            #     resource.width = width
-            #     resource.height = height
-            # else:
-            #     # 메타데이터가 없으면 실제 이미지 크기 사용
-            #     resource.width = original_image.width
-            #     resource.height = original_image.height
+            # Size 처리 - 메타데이터 우선, 없으면 실제 이미지 크기 사용
+            if "Size" in params:
+                try:
+                    width, height = map(int, params["Size"].split('x'))
+                    resource.width = width
+                    resource.height = height
+                    print(f"메타데이터에서 크기 설정: {width}x{height}")
+                except Exception as e:
+                    print(f"Size 파라미터 파싱 오류: {e}")
+                    # 파싱 실패 시 실제 이미지 크기 사용
+                    if original_image:
+                        resource.width = original_image.width
+                        resource.height = original_image.height
+                        print(f"실제 이미지 크기 사용: {resource.width}x{resource.height}")
+            else:
+                # 메타데이터가 없으면 실제 이미지 크기 사용
+                if original_image:
+                    resource.width = original_image.width
+                    resource.height = original_image.height
+                    print(f"메타데이터 없음 - 실제 이미지 크기 사용: {resource.width}x{resource.height}")
 
             # Model hash 처리
             if "Model hash" in params:
@@ -813,8 +778,9 @@ class ImageProcessingSystem:
             )
             
             if params:
+                # original_image를 파라미터로 전달하여 메타데이터가 없을 때 사용
                 self.resource_creator._resource_parser(
-                    geninfo, params, resource, session, geninfo
+                    geninfo, params, resource, session, geninfo, original_image
                 )
                 if params.get("Prompt"):
                     self.prompt_parser._process_single_resource(
@@ -822,6 +788,12 @@ class ImageProcessingSystem:
                         resource=resource,
                         prompt_text=params["Prompt"]
                     )
+            else:
+                # 메타데이터가 전혀 없는 경우 실제 이미지 크기 설정
+                resource.width = original_image.width
+                resource.height = original_image.height
+                session.commit()
+                print(f"메타데이터 없음 - 실제 이미지 크기 설정: {resource.width}x{resource.height}")
 
             self.add_create_tags(resource, session)
             self.add_default_tags(resource, session)
