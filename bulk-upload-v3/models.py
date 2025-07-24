@@ -379,6 +379,20 @@ class Team(Base):
    created_at = Column(DateTime, default=lambda: datetime.now(seoul_tz))
    updated_at = Column(DateTime, default=lambda: datetime.now(seoul_tz), onupdate=lambda: datetime.now(seoul_tz))
 
+class VertexAiEmbedDbEmbeddings(Base):
+   __tablename__ = 'vertex_ai_embed_db_embeddings'
+
+   # Resource.uuid와 연결되는 기본 키
+   file_based_uuid = Column(String(36), primary_key=True)
+   
+   embedding = Column(Text, nullable=True) 
+   original_path = Column(String(500), nullable=True)
+   full_url = Column(String(1000), nullable=True)
+   numeric_id_str = Column(String(50), nullable=True)
+
+   def __repr__(self):
+      return f"<VertexAiEmbedDbEmbeddings {self.file_based_uuid}>"
+
 def setup_database_engine(password, port):
    db_user = "wcidfu"
    db_host = "127.0.0.1"

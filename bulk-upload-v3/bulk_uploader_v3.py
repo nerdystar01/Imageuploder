@@ -35,6 +35,7 @@ from models import (
     ComfyUiWorkflow
 )
 from manager import CharacterManager, OutfitManager, EventManager, InstrumentManager, PlaveManager
+from resource_embedding_helper import ResourceEmbeddingHelper
 
 from session_utills import get_session, end_session, check_connection, upload_to_bucket, upload_image_to_gcp_bucket
 
@@ -827,6 +828,16 @@ class ImageProcessingSystem:
 
             resource.tag_ids = [tag.id for tag in resource.tags]
             session.commit()
+
+            # --- Vertex AI 임베딩 생성 단계 ---
+            try:
+                logging.info(f"리소스 ID {resource.id}에 대한 Vertex AI 임베딩 생성을 시작합니다.")
+                embedding_helper = ResourceEmbeddingHelper(resource_id=resource.id, session=session)
+                embedding_helper.run()
+            except Exception as e:
+                # 임베딩 실패가 전체 업로드 프로세스를 중단시키지 않도록 예외 처리
+                logging.error(f"리소스 ID {resource.id}의 임베딩 생성 중 오류 발생: {e}", exc_info=True)
+            # ---------------------------------
 
             return resource
 
