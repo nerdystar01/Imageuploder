@@ -142,7 +142,7 @@ def main():
     """메인 함수"""
     # 로깅 설정
     setup_logging()
-    
+    print("해당 업로드의 버전 v3-01(25-07-25) 입니다. ")
     try:
         # 사용자 ID 입력 받기
         user_id = get_user_input()
