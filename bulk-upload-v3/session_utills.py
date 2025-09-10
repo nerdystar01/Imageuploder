@@ -59,7 +59,7 @@ def get_session() -> Tuple[Any, SSHTunnelForwarder]:
     for attempt in range(retries):
         try:
             server = start_ssh_tunnel()
-            engine = setup_database_engine("nerdy@2024", server.local_bind_port)
+            engine = setup_database_engine("wcidfu", server.local_bind_port)
             session_factory = sessionmaker(bind=engine)
             session = scoped_session(session_factory)
             
