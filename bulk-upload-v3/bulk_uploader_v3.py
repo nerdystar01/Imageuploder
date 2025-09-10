@@ -836,54 +836,31 @@ class ImageProcessingSystem:
         failed_images = []  # 실패한 이미지 목록
         
         try:
-            folder_name = os.path.basename(folder_path)
-            
             with ThreadPoolExecutor(max_workers=12) as executor:
                 futures = {
                     executor.submit(
-                        self.process_single_image, 
-                        os.path.join(folder_path, img),
-                        session
-                    ): img for img in image_files
-                }
+                        self.process_single_image, os.path.join(folder_path, img), session): img 
+                        for img in image_files
+                    }
                 
-                pbar = tqdm(
-                    total=len(futures),
-                    desc=f"Processing images in {folder_name}"
-                )
-                
-                for future in as_completed(futures):
-                    img = futures[future]
+                for future in tqdm(
+                        as_completed(futures), total=len(futures), 
+                        desc=f"Processing {os.path.basename(folder_path)}"
+                    ):
                     try:
-                        result = future.result()
-                        if result:
+                        if result := future.result():
                             results.append(result)
-                            if not first_id:  # 첫 번째 성공한 결과
-                                first_id = result.id
-                            last_id = result.id  # 마지막으로 성공한 결과
+                            first_id = first_id or result.id
+                            last_id = result.id
                         processed_count += 1
                     except Exception as e:
-                        failed_images.append(img)
-                        print(f"\nError processing file: {img}")
-                        print(f"Error details: {str(e)}")
-                    finally:
-                        pbar.update(1)
-                
-                pbar.close()
+                        failed_images.append(futures[future])
+                        print(f"Error processing {futures[future]}: {e}")
             
-            # 처리 결과 출력
-            print("\n=== 처리 결과 ===")
-            print(f"총 처리 시도: {total_images}개")
-            print(f"성공: {len(results)}개")
-            print(f"실패: {len(failed_images)}개")
+            # 결과 출력
+            print(f"\n처리 완료: 성공 {len(results)}개, 실패 {len(failed_images)}개")
             if first_id and last_id:
-                print(f"성공한 리소스 ID 범위: {first_id} ~ {last_id}")
-            
-            # 실패한 파일 목록 출력
-            if failed_images:
-                print("\n=== 실패한 파일 목록 ===")
-                for i, failed_img in enumerate(failed_images, 1):
-                    print(f"{i}. {failed_img}")
+                print(f"리소스 ID 범위: {first_id} ~ {last_id}")
             
             session.commit()
             

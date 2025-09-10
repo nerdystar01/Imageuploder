@@ -318,7 +318,7 @@ class Converter:
     def get_session(self):
         server = self.start_ssh_tunnel()
         engine = setup_database_engine(
-            "nerdy@2024", 
+            "wcidfu", 
             server.local_bind_port,
             pool_size=20,  # 연결 풀 크기 설정
             max_overflow=10,  # 추가 연결 허용 개수
